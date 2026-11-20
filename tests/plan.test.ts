@@ -14,7 +14,12 @@ import { cashPlan } from "../src/plan/cashPlan";
 import { planVsActual, quarterResult, settleVerdict } from "../src/plan/report";
 import { quarterCauses } from "../src/plan/causes";
 import { decideReminders, playReminders } from "../src/plan/reminders";
-import { keyDecision, referencePlan } from "../src/plan/keyDecision";
+import { keyDecision, keyDecisionRun, pickKeyQuarter } from "../src/plan/keyDecision";
+import { expectedMonthly } from "../src/plan/reference";
+import { netWorthFen } from "../src/engine/summary";
+import type { Bill } from "../src/engine/bills";
+import type { GameConfig } from "../src/engine/types";
+import type { Product } from "../src/engine/product";
 import { createRng, randomConfig, randomDecisions } from "./helpers/play";
 
 const hijab = getProduct("hijab");
@@ -115,7 +120,9 @@ function quarters(n: number) {
       state = sq.state;
       while ((state.phase === "running" && state.day < (q + 1) * 90) || state.phase === "closing") {
         if (state.pending) {
-          state = answerPending(state, rng.next() < 0.5 ? "rush" : "ignore", product, P).state;
+          const r = answerPending(state, rng.next() < 0.5 ? "rush" : "ignore", product, P);
+          events.push(...r.events);
+          state = r.state;
           continue;
         }
         const r = stepDay(state, product, P);
@@ -166,27 +173,48 @@ describe("另外要测试的（docs/06 第 10.4 节）", () => {
       }
     }
   });
-  it("3. 换掉的那个季度之前，重算的每一天和原来完全一样（参考做法只从那个季度开始起作用）", () => {
-    const product = hijab;
-    const config = { seed: 5, productId: "hijab", fulfillment: "cross" as const, startCashFen: 2000000, firstStockQty: 300 };
-    const decisions = Array.from({ length: 8 }, () => decision({ monthlyRestockQty: 200, priceSen: 2190, adBidFen: 40, adDailyBudgetFen: 3000 }));
-    // 第 3 个季度第一天之前，换不换第 3 个季度，状态都一样
-    const runTo = (swap: boolean): GameState => {
-      let s = createGame(config, product, P).state;
-      let started = -1;
-      while (s.day < 270) {
-        const q = Math.floor(s.day / 90);
-        if (s.day % 90 === 0 && started < q) {
-          s = startQuarter(s, swap && q === 3 ? referencePlan(s, product, P) : decisions[q], product, P).state;
-          started = q;
-        }
-        s = s.pending ? answerPending(s, "ignore", product, P).state : stepDay(s, product, P).state;
-      }
-      return s;
+  it("3. 用 keyDecision 自己的重算：换掉的季度之前每一天都和玩家真实的那一局一样（玩家选过加急），之后用玩家的决定", () => {
+    const found = findGameWithRush();
+    expect(found).not.toBeNull();
+    if (!found) return;
+    const { config, decisions, product, real, rushQuarter } = found;
+    // 不换季度重算一次，就是玩家真实的那一局
+    expect(keyDecisionRun(config, decisions, product, P, null)).toEqual(real);
+    const k = rushQuarter + 1;
+    const days = (swap: number | null): GameState[] => {
+      const out: GameState[] = [];
+      keyDecisionRun(config, decisions, product, P, swap, (st) => out.push(st));
+      return out;
     };
-    expect(runTo(true)).toEqual(runTo(false));
-    const k = keyDecision(config, decisions, product, P);
-    expect(k?.referenceNetWorthFen).not.toBe(k?.playerNetWorthFen);
+    const orig = days(null);
+    const swapped = days(k);
+    expect(swapped.length).toBeGreaterThan((k + 1) * 90 + 1);
+    for (let d = 0; d < k * 90; d++) expect(swapped[d]).toEqual(orig[d]);
+    // 换掉的季度用参考价，下一个季度回到玩家定的售价
+    expect(swapped[k * 90 + 1].priceSen).toBe(product.refPriceSen);
+    expect(swapped[(k + 1) * 90 + 1].priceSen).toBe(decisions[k + 1].priceSen);
+    // keyDecision 的"玩家的净资产"就是真实那一局的
+    const kd = keyDecision(config, decisions, product, P);
+    expect(kd?.playerNetWorthFen).toBe(netWorthFen(real, product, P));
+  });
+  it("3. 一样大时取靠前的季度", () => {
+    expect(pickKeyQuarter(100, [150, 50, 150])?.quarter).toBe(0);
+    expect(pickKeyQuarter(100, [110, 300, -100])?.quarter).toBe(1);
+    expect(pickKeyQuarter(100, [110, 120, 400])).toEqual({ quarter: 2, playerNetWorthFen: 100, referenceNetWorthFen: 400 });
+    expect(pickKeyQuarter(100, [])).toBeNull();
+  });
+  it("3. 玩家没有的季度：沿用上一个季度的售价和补货量，不买合规、不升级，一直算到结束", () => {
+    const config = { seed: 5, productId: "hijab", fulfillment: "cross" as const, startCashFen: 2000000, firstStockQty: 300 };
+    const decs = [0, 1, 2].map(() => decision({ monthlyRestockQty: 200, priceSen: 2190 }));
+    const seen: GameState[] = [];
+    const end = keyDecisionRun(config, decs, hijab, P, null, (st) => seen.push(st));
+    expect(end.day).toBeGreaterThanOrEqual(720);
+    expect(["finished", "bankrupt", "banned"]).toContain(end.phase);
+    for (const day of [271, 451, 631]) {
+      expect(seen[day].priceSen).toBe(2190);
+      expect(seen[day].monthlyRestockQty).toBe(200);
+      expect(seen[day].fulfillment).toBe("cross");
+    }
   });
   it("4. 为什么：最多 3 条，顺序和文档一样", () => {
     const order = [
@@ -194,6 +222,7 @@ describe("另外要测试的（docs/06 第 10.4 节）", () => {
       "cause_ads_loss", "cause_price_low", "cause_price_high", "cause_storage", "cause_cash_wait", "cause_push_up",
     ];
     let seen = 0;
+    const kinds = new Set<string>();
     for (const { start, end, events, idx } of qs) {
       const c = quarterCauses(Math.floor(start.day / 90), events, start, end, products[idx], P);
       expect(c.length).toBeLessThanOrEqual(3);
@@ -201,8 +230,11 @@ describe("另外要测试的（docs/06 第 10.4 节）", () => {
       expect(pos.every((p) => p >= 0)).toBe(true);
       expect([...pos].sort((a, b) => a - b)).toEqual(pos);
       seen += c.length;
+      for (const x of c) kinds.add(x.key);
     }
     expect(seen).toBeGreaterThan(100);
+    // 13 种原因都出现过（季度中间选了加急的事件也算进这个季度）
+    expect([...kinds].sort()).toEqual([...order].sort());
   });
 });
 
@@ -288,10 +320,134 @@ describe("输入检查（docs/09 第五节）", () => {
 describe("纪念海报的数字（docs/10 第九节）", () => {
   it("桶里装多少、溢出几个金币、几倍", async () => {
     const { posterNumbers } = await import("../src/plan/poster");
-    expect(posterNumbers(1500000, P)).toEqual({ fillBp: 5000, overflow: 0, multipleE1: 5 });
-    expect(posterNumbers(3000000, P)).toEqual({ fillBp: 10000, overflow: 0, multipleE1: 10 });
-    expect(posterNumbers(4800000, P)).toEqual({ fillBp: 10000, overflow: 6, multipleE1: 16 });
-    expect(posterNumbers(99000000, P)).toEqual({ fillBp: 10000, overflow: 12, multipleE1: 330 });
+    // 目标净资产 ¥50,000（规则包第 9 版）
+    expect(posterNumbers(2500000, P)).toEqual({ fillBp: 5000, overflow: 0, multipleE1: 5 });
+    expect(posterNumbers(4999999, P)).toEqual({ fillBp: 9999, overflow: 0, multipleE1: 9 });
+    expect(posterNumbers(5000000, P)).toEqual({ fillBp: 10000, overflow: 0, multipleE1: 10 });
+    expect(posterNumbers(8000000, P)).toEqual({ fillBp: 10000, overflow: 6, multipleE1: 16 });
+    expect(posterNumbers(99000000, P)).toEqual({ fillBp: 10000, overflow: 12, multipleE1: 198 });
     expect(posterNumbers(-200000, P)).toEqual({ fillBp: 0, overflow: 0, multipleE1: -1 });
+  });
+});
+
+/** 找一局玩家在季度中间选过加急、并且加急之后至少还有两个季度的游戏（按固定的种子顺序找） */
+function findGameWithRush(): { config: GameConfig; decisions: QuarterDecision[]; product: Product; real: GameState; rushQuarter: number } | null {
+  for (let i = 0; i < 120; i++) {
+    const product = products[i % 6];
+    const seed = 900 + i;
+    const rng = createRng(seed);
+    const config = { ...randomConfig(rng, seed, product, P, "cross"), startCashFen: 3000000 };
+    const decisions = randomDecisions(rng, seed, product, P).map((d) => ({ ...d, bulkShortChoices: [] as { inquiryId: string; choice: "rush" | "ignore" }[] }));
+    let state = createGame(config, product, P).state;
+    let started = -1;
+    let rushQuarter = -1;
+    while (state.phase === "running" || state.phase === "closing") {
+      const q = Math.floor(state.day / 90);
+      if (state.phase === "running" && state.day % 90 === 0 && started < q) {
+        state = startQuarter(state, decisions[q], product, P).state;
+        started = q;
+      }
+      if (state.pending) {
+        decisions[q].bulkShortChoices.push({ inquiryId: state.pending.inquiryId, choice: "rush" });
+        if (rushQuarter < 0) rushQuarter = q;
+        state = answerPending(state, "rush", product, P).state;
+        continue;
+      }
+      state = stepDay(state, product, P).state;
+    }
+    if (rushQuarter >= 0 && rushQuarter <= 4 && state.day >= 720) return { config, decisions, product, real: state, rushQuarter };
+  }
+  return null;
+}
+
+const ev = (o: Record<string, unknown>): GameEvent => o as unknown as GameEvent;
+
+describe("固定数字：参考数字", () => {
+  it("expMonthly：第 1 个季度以后按上个季度和季节换算，第二年的系数从第 4 个季度（第 5 季）开始", () => {
+    const base = r1State();
+    const at = (day: number): number => expectedMonthly({ ...base, day, quarterStats: { ...base.quarterStats, wanted: 300 } }, hijab, P);
+    expect(at(90)).toBe(36); // 100 × 8000 / 22000
+    expect(at(270)).toBe(144); // 100 × 13000 / 9000
+    expect(at(360)).toBe(203); // 100 × 26400 / 13000
+    expect(at(450)).toBe(36); // 100 × 9600 / 26400
+  });
+  it("stockDays 扣掉留给大单的货", () => {
+    const s = r1State();
+    expect(referenceNumbers(s, hijab, P).stockDays).toBe(22);
+    const won = { ...x2State().bulkOrders[0], status: "won" as const, qty: 100, shipDay: 120, warnDay: 110, dueDay: 120, balanceDay: null };
+    expect(referenceNumbers({ ...s, bulkOrders: [won] }, hijab, P).stockDays).toBe(11);
+  });
+});
+
+describe("固定数字：现金计划", () => {
+  it("跨境店选了合规不算合规费；补货按供应商上限截", () => {
+    const p = cashPlan(r1State(), decision({ buyCompliance: true, monthlyRestockQty: 1000 }), hijab, P);
+    expect(p.complianceFen).toBe(0);
+    expect(p.restockFen).toBe(3 * 800 * 900);
+  });
+  it("大单尾款日正好是季末最后一天算进来，晚一天不算", () => {
+    const s = r1State();
+    const bulk = (balanceDay: number) => ({ ...x2State().bulkOrders[0], balanceDay });
+    const base = cashPlan(s, decision(), hijab, P).sureInFen;
+    expect(cashPlan({ ...s, bulkOrders: [bulk(89)] }, decision(), hijab, P).sureInFen - base).toBe(115500);
+    expect(cashPlan({ ...s, bulkOrders: [bulk(90)] }, decision(), hijab, P).sureInFen - base).toBe(0);
+  });
+});
+
+describe("固定数字：报表", () => {
+  it("planVsActual 的实际花掉包括开通费，实际广告费只算 ads", () => {
+    const bill = (kind: string, amountFen: number): Bill => ({ id: kind, day: 0, role: "finance", kind, amountFen }) as unknown as Bill;
+    const plan = cashPlan(r1State(), decision(), hijab, P);
+    const pa = planVsActual(plan, [bill("setup", -10000), bill("restock", -5000), bill("fixed", -900), bill("compliance", -100), bill("ads", -300), bill("payout", 999)], 1);
+    expect(pa.actualOutFen).toBe(16000);
+    expect(pa.actualAdsFen).toBe(300);
+  });
+  it("quarterResult：中了几张、交了几张，只算这个季度的", () => {
+    const s = r1State();
+    const events = [ev({ type: "bulk_won", day: 10 }), ev({ type: "bulk_delivered", day: 40 }), ev({ type: "bulk_delivered", day: 80 }), ev({ type: "bulk_delivered", day: 95 })];
+    const r = quarterResult(0, events, s, s, P);
+    expect(r.bulkWon).toBe(1);
+    expect(r.bulkDelivered).toBe(2);
+  });
+});
+
+describe("固定数字：做决定时的提醒", () => {
+  const keys = (s: GameState): string[] => decideReminders(s, hijab, P).map((r) => r.key);
+  it("够卖 15 天不提醒，14 天提醒", () => {
+    expect(keys({ ...r1State(), stockQty: 132 })).not.toContain("stockDays"); // 132 × 30 / 264 = 15
+    expect(keys({ ...r1State(), stockQty: 131 })).toContain("stockDays"); // 14
+  });
+  it("有大单这个季度要发货时只提醒大单，不再提醒够卖几天", () => {
+    const won = { ...x2State().bulkOrders[0], status: "won" as const, qty: 10, shipDay: 60, warnDay: 50, dueDay: 60, balanceDay: null };
+    const k = keys({ ...r1State(), stockQty: 20, bulkOrders: [won] });
+    expect(k).toContain("bulkDue");
+    expect(k).not.toContain("stockDays");
+  });
+  it("expMonthly 是 0 时估不出来，不提醒", () => {
+    const s = r1State();
+    const z = { ...s, day: 90, stockQty: 0, quarterStats: { ...s.quarterStats, wanted: 0 } };
+    expect(expectedMonthly(z, hijab, P)).toBe(0);
+    expect(keys(z)).not.toContain("stockDays");
+  });
+});
+
+describe("固定数字：为什么的三个门槛", () => {
+  const s = r1State();
+  const causeKeys = (events: GameEvent[], end: GameState = s): string[] => quarterCauses(0, events, s, end, hijab, P).map((c) => c.key);
+  const shipped = (wanted: number, lost: number) =>
+    ev({ type: "orders_shipped", day: 5, organicOrders: wanted, adOrders: 0, shipped: wanted - lost, lost, perOrderFeeFen: 0, payoutFenEach: 0, demandBp: 10000 });
+  it("缺货正好 5% 不算，超过才算", () => {
+    expect(causeKeys([shipped(100, 5)])).not.toContain("cause_stockout");
+    expect(causeKeys([shipped(100, 6)])).toContain("cause_stockout");
+  });
+  it("广告花掉正好 60% 不算，不到才算", () => {
+    const ads = (spend: number) => ev({ type: "ads_ran", day: 5, budgetFen: 1000, adSpendFen: spend, clicks: 1, adOrders: 0, refBidFen: 0, demandBp: 10000 });
+    expect(causeKeys([ads(600)])).not.toContain("cause_ads_unspent");
+    expect(causeKeys([ads(599)])).toContain("cause_ads_unspent");
+  });
+  it("推流分高 5 分算，高 4 分不算", () => {
+    const up = (n: number): GameState => ({ ...s, pushScore: { ...s.pushScore, sales: s.pushScore.sales + n } });
+    expect(causeKeys([], up(5))).toContain("cause_push_up");
+    expect(causeKeys([], up(4))).not.toContain("cause_push_up");
   });
 });

@@ -152,7 +152,7 @@ export const malaysia = {
   },
   // ----- 经营模型（docs/04 第十二节）-----
   goalNetWorthFen: {
-    value: 3000000,
+    value: 5000000,
     unit: "fen",
     source: "C",
     note: "\"赚到第一桶金\"需要的净资产",
