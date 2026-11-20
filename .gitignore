@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.env.*
+检查记录/自动/
+.DS_Store
+*.log

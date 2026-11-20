@@ -1,0 +1,9 @@
+#!/bin/sh
+# 提交之前运行自动检查（docs/13 第 3.1 节）。不通过，这次提交就不成功。
+npm run check
+status=$?
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "自动检查没有通过，这次提交被拦住了。请修好再提交。不要用 --no-verify。"
+  exit 1
+fi
