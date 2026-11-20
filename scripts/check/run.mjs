@@ -129,7 +129,12 @@ function checkK3() {
   for (const f of fileErrors) reasons.push(`测试文件出错：${relative(ROOT, f.name)} ${tail(f.message ?? "", 3).join(" ")}`);
   for (const a of failed) {
     reasons.push(`没通过：${a.file} › ${a.fullName}`);
-    const msg = (a.failureMessages ?? []).join("\n");
+    // 只留错误说明，去掉调用栈
+    const msg = (a.failureMessages ?? [])
+      .join("\n")
+      .split("\n")
+      .filter((l) => !/^\s*at\s/.test(l))
+      .join("\n");
     for (const l of tail(msg, 4)) reasons.push(`    ${l}`);
   }
   for (const a of skipped) reasons.push(`被跳过（${a.status}）：${a.file} › ${a.fullName}`);
