@@ -126,7 +126,7 @@ export function s7(): CheckResult {
     const outY = !c.scrolls && (r.top < b.top - 1 || r.bottom > b.bottom + 1);
     return outX || outY;
   });
-  // 功能区：里面的每个元素上下左右都不超出它的上一层，也不超出卡片的内边距（docs/11 S7）
+  // 功能区：里面的每个元素上下左右都不超出它的上一层，也不超出卡片的内边距；五个区（data-region）里的元素不超出上一层（docs/11 S7）
   const spill: string[] = [];
   const out = (a: DOMRect, b: { left: number; right: number; top: number; bottom: number }): boolean =>
     a.left < b.left - 1 || a.right > b.right + 1 || a.top < b.top - 1 || a.bottom > b.bottom + 1;
@@ -145,6 +145,15 @@ export function s7(): CheckResult {
       const parent = child.parentElement;
       if (out(r, inner) || (parent && parent !== panel && out(r, parent.getBoundingClientRect()))) {
         spill.push(`${describe(panel)} > ${describe(child)}`);
+        break;
+      }
+    }
+  }
+  for (const region of Array.from(document.querySelectorAll("[data-region]")).filter(visible)) {
+    for (const child of Array.from(region.querySelectorAll("*")).filter(visible)) {
+      const parent = child.parentElement;
+      if (parent && out(child.getBoundingClientRect(), parent.getBoundingClientRect())) {
+        spill.push(`${describe(region)} > ${describe(child)}`);
         break;
       }
     }

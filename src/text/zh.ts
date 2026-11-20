@@ -141,6 +141,8 @@ export const zh = {
     restockOnWay: "路上的补货",
     expMonthly: (n: string): string => `预计每月来 ${n} 单`,
     stockDays: (d: string): string => `够卖 ${d} 天`,
+    /** 功能区里的决定：每月补货 {qty} 件（docs/07 第四节） */
+    restockLabel: "每月补货",
     restockValue: (qty: string): string => `${qty} 件`,
     noRestock: "不补货",
     lastQuarter: "上季度",

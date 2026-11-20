@@ -1,5 +1,5 @@
 // 自动截图和画面检查（docs/11 第四节）：npm run shots。
-// 打开本地预览，依次进入每个页面，在 5 种窗口大小下截图，同时运行页面自检（src/ui/dev/selfcheck.ts，和 ?debug=1 共用）。
+// 打开本地预览，依次进入每个页面，在 docs/11 第 4.1 节的 7 种窗口大小下截图，同时运行页面自检（src/ui/dev/selfcheck.ts，和 ?debug=1 共用）。
 // Playwright 只在开发时用，不会进入发布的网站。
 import { chromium, type ConsoleMessage, type Page } from "playwright";
 import { preview } from "vite";
@@ -14,6 +14,7 @@ const SIZES: [number, number][] = [
   [1920, 1080],
   [1024, 768],
   [390, 844],
+  [360, 780],
 ];
 
 /** 要截图的页面：名字、网址参数；scrolls 表示可以上下滚动（不查 S2）；world 表示要等世界画好。

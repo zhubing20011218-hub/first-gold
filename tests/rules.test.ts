@@ -197,7 +197,7 @@ describe("规则检查", () => {
     // 两种查法一起用：任何 "字母或数字-[" 的写法（包括 !p-[3px]、[&>*]:p-[2px]、group-hover/item:p-[2px]），和 "-(--变量)" 的写法
     const hits = [
       ...findHits(uiLike, /[a-z0-9]-\[[^\]]*\]/, { code: true }),
-      ...findHits(uiLike, /[a-z0-9]-\(--[^)]*\)/, { code: true }),
+      ...findHits(uiLike, /[a-z0-9]-\((?:[a-z-]+:)?--[^)]*\)/, { code: true }),
     ];
     expect(hits, show(hits)).toEqual([]);
   });

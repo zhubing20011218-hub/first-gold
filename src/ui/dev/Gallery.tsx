@@ -21,7 +21,7 @@ import { gallerySamples as S } from "./gallerySamples";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-dialog border-2 border-ink bg-paper p-6">
+    <section className="flex flex-col gap-4 rounded-dialog border-2 border-ink bg-paper p-6 max-md:p-4">
       <h2 className="text-title font-bold">{title}</h2>
       {children}
     </section>
@@ -47,7 +47,7 @@ export function Gallery() {
 
   return (
     <div className="h-full overflow-y-auto bg-sea-soft">
-      <main className="mx-auto flex max-w-content flex-col gap-6 px-6 py-8" data-gallery>
+      <main className="mx-auto flex max-w-content flex-col gap-6 px-6 py-8 max-md:px-4" data-gallery>
         <h1 className="text-screen font-bold">{g.title}</h1>
 
         <Section title={g.base}>
@@ -200,7 +200,7 @@ export function Gallery() {
                 { label: zh.area.restockOnWay, value: `${S.onWay} ${zh.status.piece}` },
               ]}
               reference={`${zh.area.expMonthly(String(S.expMonthly))}${zh.dot}${zh.area.stockDays(String(S.stockDays))}`}
-              actions={[{ label: zh.popups.restockQty, value: zh.area.restockValue(String(S.stepperQty)), onChange: () => undefined }]}
+              actions={[{ label: zh.area.restockLabel, value: zh.area.restockValue(String(S.stepperQty)), onChange: () => undefined }]}
             />
             <AreaPanel
               area="ops"

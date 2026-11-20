@@ -89,6 +89,9 @@ describe("设计变量和文档一样", () => {
 });
 
 describe("设计变量不多也不少", () => {
+  it("手机布局和电脑布局的分界是 1024（docs/08 第一节）：Tailwind 的 md 是 64rem", () => {
+    expect(cssVar("breakpoint-md")).toBe("64rem");
+  });
   it("theme.css 先清掉 Tailwind 自带的颜色、字号、字体、圆角、影子，只留自己定的（docs/08）", () => {
     for (const ns of ["color", "text", "font", "radius", "shadow"]) expect(css, ns).toMatch(new RegExp(`--${ns}-\\*:\\s*initial;`));
   });
