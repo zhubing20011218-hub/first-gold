@@ -206,6 +206,13 @@ describe("规则检查", () => {
     expect([...anyHits, ...ignoreHits], show([...anyHits, ...ignoreHits])).toEqual([]);
   });
 
+  it("模拟脚本只引用 engine、params、products（任务 04）", () => {
+    const files = [...listFiles("scripts/sim"), "scripts/simulate.ts"].filter((f) => f.endsWith(".ts"));
+    expect(files.length).toBeGreaterThan(1);
+    const hits = badImports(files, /(^|\/)src\/(ui|scene|text|plan)(\/|$)|^react($|-|\/)/);
+    expect(hits, show(hits)).toEqual([]);
+  });
+
   it("R8 参数表里每个参数都有 value、unit、source、note、public，source 只能是 A、B、C", () => {
     const mods = import.meta.glob("../src/params/*.ts", { eager: true }) as Record<string, Record<string, unknown>>;
     const problems: string[] = [];

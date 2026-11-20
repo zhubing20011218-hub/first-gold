@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "check": "node scripts/check/run.mjs",
     "check:full": "node scripts/check/run.mjs --full",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "sim": "vite build --ssr scripts/simulate.ts --outDir node_modules/.sim --emptyOutDir --logLevel warn && node node_modules/.sim/simulate.js"
   },
   "engines": {
     "node": ">=20"
