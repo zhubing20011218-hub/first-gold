@@ -12,9 +12,10 @@ function listFiles(dir: string): string[] {
   let entries: string[];
   try {
     entries = readdirSync(abs);
-  } catch {
-    // 文件夹还不存在时，没有文件可查
-    return [];
+  } catch (e) {
+    // 只有"文件夹还不存在"时当作没有文件；其他错误照常报出来
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
   }
   const out: string[] = [];
   for (const name of entries) {
@@ -119,8 +120,10 @@ function badImports(files: string[], banned: RegExp): Hit[] {
 }
 
 describe("规则检查", () => {
-  it("找得到 src/engine 里的文件（防止规则检查什么都没查）", () => {
+  it("找得到 src/engine、src/ui、src/params 里的文件（防止规则检查什么都没查）", () => {
     expect(engineFiles.length).toBeGreaterThan(0);
+    expect(listFiles("src/ui").length).toBeGreaterThan(0);
+    expect(listFiles("src/params").length).toBeGreaterThan(0);
   });
 
   it("R1 src/engine、src/staff 里没有 Math.random、Date.now、new Date", () => {
