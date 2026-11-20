@@ -287,17 +287,31 @@ describe("大单", () => {
     expect(r.state.bulkOrders[0].status).toBe("delivered");
     expect(r.state.midChoices[bulk.inquiryId]).toBe("rush");
   });
-  it("选不处理：到发货那天违约，退定金、赔违约金、信誉不低于 0", () => {
+  it("信誉不会低于 0", () => {
     const { state } = toBulkQuarter("cross", 0, 0, 60);
     const bulk = state.bulkOrders[0];
+    const r = advance({ ...state, bulkRep: 2 }, bulk.shipDay + 1, () => decision(), "ignore", 1);
+    expect(r.state.bulkRep).toBe(0);
+  });
+  it("选不处理：到发货那天违约，退定金、赔违约金、信誉扣 4 点", () => {
+    const won = toBulkQuarter("cross", 0, 0, 60).state;
+    // 信誉从 6 开始，才看得出扣了 4 点
+    const state: GameState = { ...won, bulkRep: 6 };
+    const bulk = state.bulkOrders[0];
+    const cashBefore = state.cashFen;
     const r = advance(state, bulk.shipDay + 1, () => decision(), "ignore", 1);
     const penalty = Math.floor((bulk.valueFen * 2000 + 5000) / 10000);
     expect(r.events.find((e) => e.type === "bulk_defaulted")).toMatchObject({
       day: bulk.shipDay,
       depositFen: bulk.depositFen,
       penaltyFen: penalty,
-      bulkRep: 0,
+      bulkRep: 2,
     });
+    expect(r.state.bulkRep).toBe(2);
+    // 违约那天的现金变化里包含退定金和违约金
+    const dayEvents = r.events.filter((e) => e.day === bulk.shipDay);
+    expect(dayEvents.some((e) => e.type === "bulk_defaulted")).toBe(true);
+    expect(cashBefore).toBeGreaterThan(0);
     expect(r.state.totals.bulkOutFen).toBe(bulk.depositFen + penalty);
     expect(r.state.quarterStats.bulkDefaults).toBe(1);
   });
@@ -330,6 +344,15 @@ describe("本土店的风险", () => {
     expect(banPays.length).toBeGreaterThan(0);
     const total = banPays.reduce((s, e) => s + (e.type === "payout_received" ? e.amountFen : 0), 0);
     expect(ban.recoveredFen).toBe(total);
+    // 每一批拿回的正好是 applyBp(单数 × 每单打款, banPayoutBp)，也就是一半
+    expect(P.banPayoutBp.value).toBe(5000);
+    for (const e of banPays) {
+      if (e.type !== "payout_received") continue;
+      const shipped = r.events.find((x) => x.type === "orders_shipped" && x.day === e.orderDay);
+      const each = shipped && shipped.type === "orders_shipped" ? shipped.payoutFenEach : -1;
+      expect(each).toBeGreaterThan(0);
+      expect(e.amountFen).toBe(Math.floor((e.orders * each * 5000 + 5000) / 10000));
+    }
     expect(r.state.orderBatches.every((b) => b.paid)).toBe(true);
   });
   it("一直是跨境直发：没有审核和封店，风险值一直是 0", () => {
