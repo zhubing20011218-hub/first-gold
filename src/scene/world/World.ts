@@ -5,6 +5,7 @@ import { color, world as W } from "../../ui/theme/tokens";
 import {
   bareBranches,
   box,
+  gableRoof,
   buyer,
   bunting,
   coin,
@@ -75,9 +76,17 @@ const MONEY_PATH: [number, number, number][] = [
   [9.5, 0.05, 10.6],
   [6.0, 0.56, 9.6],
 ];
-const GOODS_PATH: [number, number, number][] = [
-  [8.6, 0.05, 4.7],
-  [13.6, 0.05, 4.7],
+/** 货的去路：码头到码头（在船的南边，不被船挡住），和仓库门口沿着路到房子（docs/10 第三节） */
+const GOODS_PATHS: [number, number, number][][] = [
+  [
+    [8.5, 0.05, 5.95],
+    [13.9, 0.05, 5.95],
+  ],
+  [
+    [18.4, 0.56, 3.95],
+    [18.4, 0.56, 4.35],
+    [23.4, 0.56, 4.35],
+  ],
 ];
 const STREET_SPOTS: [number, number][] = [
   [22.3, 5.5],
@@ -87,8 +96,18 @@ const STREET_SPOTS: [number, number][] = [
   [23.4, 4.6],
   [16.6, 5.5],
   [19.6, 5.3],
-  [24.3, 3.6],
+  [24.4, 5.6],
 ];
+
+function defaultRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
+  const r = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  r.shadowMap.enabled = true;
+  // three 0.187 去掉了 PCFSoftShadowMap，用 PCFShadowMap 加上 shadow.radius 做柔和的影子
+  r.shadowMap.type = THREE.PCFShadowMap;
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  return r;
+}
 
 export class World {
   readonly canvas: HTMLCanvasElement;
@@ -137,17 +156,16 @@ export class World {
   private firstFrameDone: (() => void) | null = null;
   readonly ready: Promise<void>;
 
-  constructor(canvas: HTMLCanvasElement, opts: { mobile: boolean; reduceMotion: boolean }) {
+  /**
+   * makeRenderer 只给测试用：测试里没有 WebGL，换成一个什么都不画的渲染器，用来检查世界里摆了什么。
+   */
+  constructor(canvas: HTMLCanvasElement, opts: { mobile: boolean; reduceMotion: boolean }, makeRenderer: (c: HTMLCanvasElement) => THREE.WebGLRenderer = defaultRenderer) {
     this.canvas = canvas;
     this.reduceMotion = opts.reduceMotion;
     this.ready = new Promise((resolve) => {
       this.firstFrameDone = resolve;
     });
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer = makeRenderer(canvas);
 
     this.scene.background = new THREE.Color(W.season[0].sky);
     this.camera.position.copy(CENTER).add(new THREE.Vector3(30, 24.5, 30));
@@ -174,7 +192,8 @@ export class World {
     this.scene.add(this.shipGroup);
     this.extraHouse = house(17.3, 8.3, W.houseRoof[5]);
     this.buildMalaysia();
-    this.scene.add(dashedPath(GOODS_PATH, color.sea, "goods-path"), dashedPath(MONEY_PATH, color.gold, "money-path"));
+    for (const path of GOODS_PATHS) this.scene.add(dashedPath(path, color.sea, "goods-path"));
+    this.scene.add(dashedPath(MONEY_PATH, color.gold, "money-path"));
     for (let i = 0; i < 6; i++) {
       const c = coin(this.coinMat);
       this.coins.push(c);
@@ -207,8 +226,8 @@ export class World {
       cn.add(t.group, bare);
       this.trees.push({ leaves: t.leaves, bare });
     }
-    // 冬天屋顶上的雪
-    this.snowRoofs.add(box(1.5, 1.1, 3.8, 2.5, 0.05, mat(W.snow), 2.75), box(4.85, 7.28, 1.5, 1.24, 0.05, mat(W.snow), 1.88));
+    // 冬天屋顶上的雪：办公室的人字屋顶盖一层白（工厂的锯齿屋顶本来就是白的）
+    this.snowRoofs.add(gableRoof(4.88, 7.28, 1.44, 1.24, 0.5, mat(W.snow), 1.43));
     this.snowRoofs.visible = false;
     cn.add(this.snowRoofs);
     // 工厂门口的货箱（跨境直发时堆在这里）
@@ -242,12 +261,12 @@ export class World {
     my.add(truckMy.group);
     const spots: [number, number][] = [
       [15.8, 0.9],
-      [24.3, 0.8],
-      [20.5, 0.9],
+      [24.45, 0.55],
+      [20.75, 0.6],
       [16, 9.1],
       [24.3, 9.2],
-      [21.6, 8.9],
-      [18.3, 9.3],
+      [23.0, 9.2],
+      [19.6, 9.3],
     ];
     for (const [x, z] of spots) {
       const p = palm(x, z);
@@ -388,7 +407,6 @@ export class World {
 
     // 发货方式：跨境直发时仓库是暗的、门关着，货箱堆在工厂门口
     const local = view.fulfillment === "local";
-    for (const d of this.doors) (d.material as THREE.MeshStandardMaterial).color.set(local ? W.window : W.wallShade);
     const piles = local ? this.warehouseCrates : this.factoryCrates;
     const empty = local ? this.factoryCrates : this.warehouseCrates;
     piles.forEach((c, i) => (c.visible = i < view.crates));
@@ -399,7 +417,6 @@ export class World {
       const t = (i + 0.5) / 6;
       c.position.copy(this.pointOnPath(MONEY_PATH, t)).add(new THREE.Vector3(0, 0.35, 0));
     });
-    this.coinMat.color.set(view.frozen ? W.gray : W.coin);
 
     // 变灰：倒闭整个世界；封店只有马来西亚。跨境直发时仓库也偏暗
     const gray = new THREE.Color(W.gray);
@@ -408,6 +425,11 @@ export class World {
       m.color.copy(base);
       if (toGray) m.color.lerp(gray, 0.75);
     }
+    // 下面这些要放在恢复颜色的循环后面，不然会被恢复成原来的颜色
+    // 卷帘门：本土店开着（看得见里面），跨境直发关着
+    for (const d of this.doors) (d.material as THREE.MeshStandardMaterial).color.set(local ? W.window : W.wallShade);
+    // 审核时金币停住并变灰
+    this.coinMat.color.set(view.frozen ? W.gray : W.coin);
     this.cnGrass.color.set(view.gray === "all" ? W.gray : season.grass);
     this.leafA.color.set(view.gray === "all" ? W.gray : season.tree[0]);
     this.leafB.color.set(view.gray === "all" ? W.gray : season.tree[1]);

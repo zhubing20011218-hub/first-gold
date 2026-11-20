@@ -36,12 +36,17 @@ interface PageResult {
   failures: string[];
 }
 
-async function waitWorld(page: Page): Promise<void> {
-  await page.waitForFunction(() => (window as unknown as { __worldReady?: boolean }).__worldReady === true, undefined, { timeout: 15000 }).catch(() => undefined);
+/** 等世界画完第一帧（或者显示了替代图）。等不到返回 false */
+async function waitWorld(page: Page): Promise<boolean> {
+  const ok = await page
+    .waitForFunction(() => (window as unknown as { __worldReady?: boolean }).__worldReady === true, undefined, { timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
   await page.waitForTimeout(300);
+  return ok;
 }
 
-async function checkPage(page: Page, scrolls: boolean, w: number, h: number): Promise<string[]> {
+async function checkPage(page: Page, scrolls: boolean, w: number, h: number, world = false): Promise<string[]> {
   const failures: string[] = [];
   const results = (await page.evaluate(() => {
     const f = (window as unknown as { __selfcheck?: () => CheckResult[] }).__selfcheck;
@@ -60,6 +65,11 @@ async function checkPage(page: Page, scrolls: boolean, w: number, h: number): Pr
     return f ? f() : null;
   });
   if (sample && new Set(sample).size < 2) failures.push("S10：世界的画布是空的");
+  // 有世界的页面：既没有画布可以取颜色，也没有替代图，就是世界没出来
+  if (world && !sample) {
+    const fallback = await page.evaluate(() => document.querySelectorAll("[data-world-fallback]").length);
+    if (fallback === 0) failures.push("S10：世界的画布取不到颜色，也没有替代图");
+  }
   return failures;
 }
 
@@ -81,7 +91,8 @@ async function main(): Promise<void> {
   const all: PageResult[] = [];
   try {
     for (const [w, h] of sizes) {
-      const context = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
+      // 截图时用"减少动态效果"：世界里什么都不动（docs/10 第六节），每次截出来都一样
+      const context = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, reducedMotion: "reduce" });
       for (const p of pages) {
         const page = await context.newPage();
         const errors: string[] = [];
@@ -90,13 +101,14 @@ async function main(): Promise<void> {
         });
         page.on("pageerror", (e) => errors.push(e.message));
         await page.goto(base + p.query, { waitUntil: "networkidle" });
-        if (p.world) await waitWorld(page);
+        const worldOk = p.world ? await waitWorld(page) : true;
         await page.evaluate(() => document.fonts.ready);
         // S6：页面加载完成（字体、脚本都下载完）之后没有任何网络请求。停 2 秒看有没有新的请求
         const late: string[] = [];
         page.on("request", (r) => late.push(r.url()));
         await page.waitForTimeout(2000);
-        const failures = await checkPage(page, Boolean(p.scrolls), w, h);
+        const failures = await checkPage(page, Boolean(p.scrolls), w, h, Boolean(p.world));
+        if (!worldOk) failures.push("S10：15 秒内世界没有画好");
         if (errors.length > 0) failures.push(`S5：控制台报错 ${errors.slice(0, 3).join("；")}`);
         if (late.length > 0) failures.push(`S6：加载之后还有网络请求 ${late.slice(0, 3).join("；")}`);
         // 可以滚动的页面（展示页）是在里面的一层滚动，整页截图截不到下面：先检查，再把窗口拉到内容的全高截图
@@ -119,26 +131,28 @@ async function main(): Promise<void> {
     // S10 的后一半：关掉 WebGL 再打开有世界的页面，要看到静态的替代图，页面不报错
     if (!process.env.SHOTS_SIZE) {
       const no3d = await chromium.launch({ args: ["--disable-webgl", "--disable-webgl2", "--disable-3d-apis"] });
-      const context = await no3d.newContext({ viewport: { width: 1440, height: 800 }, deviceScaleFactor: 1 });
-      for (const p of pages.filter((x) => x.world)) {
-        const page = await context.newPage();
-        const errors: string[] = [];
-        page.on("console", (m: ConsoleMessage) => {
-          if (m.type() === "error") errors.push(m.text());
-        });
-        page.on("pageerror", (e) => errors.push(e.message));
-        await page.goto(base + p.query, { waitUntil: "networkidle" });
-        await waitWorld(page);
-        await page.evaluate(() => document.fonts.ready);
-        const failures = await checkPage(page, Boolean(p.scrolls), 1440, 800);
-        const fallback = await page.evaluate(() => document.querySelectorAll("[data-world-fallback]").length);
-        if (fallback === 0) failures.push("S10：关掉 WebGL 之后没有显示替代图");
-        if (errors.length > 0) failures.push(`S5：控制台报错 ${errors.slice(0, 3).join("；")}`);
-        await page.screenshot({ path: join(OUT, `${p.name}-no3d-1440x800.png`) });
-        all.push({ page: `${p.name}（关掉 3D）`, size: "1440x800", failures });
-        await page.close();
+      for (const [nw, nh] of [[1440, 800], [390, 844], [360, 780]] as const) {
+        const context = await no3d.newContext({ viewport: { width: nw, height: nh }, deviceScaleFactor: 1, reducedMotion: "reduce" });
+        for (const p of pages.filter((x) => x.world)) {
+          const page = await context.newPage();
+          const errors: string[] = [];
+          page.on("console", (m: ConsoleMessage) => {
+            if (m.type() === "error") errors.push(m.text());
+          });
+          page.on("pageerror", (e) => errors.push(e.message));
+          await page.goto(base + p.query, { waitUntil: "networkidle" });
+          await waitWorld(page);
+          await page.evaluate(() => document.fonts.ready);
+          const failures = await checkPage(page, Boolean(p.scrolls), nw, nh);
+          const fallback = await page.evaluate(() => document.querySelectorAll("[data-world-fallback]").length);
+          if (fallback === 0) failures.push("S10：关掉 WebGL 之后没有显示替代图");
+          if (errors.length > 0) failures.push(`S5：控制台报错 ${errors.slice(0, 3).join("；")}`);
+          await page.screenshot({ path: join(OUT, `${p.name}-no3d-${nw}x${nh}.png`) });
+          all.push({ page: `${p.name}（关掉 3D）`, size: `${nw}x${nh}`, failures });
+          await page.close();
+        }
+        await context.close();
       }
-      await context.close();
       await no3d.close();
     }
   } finally {

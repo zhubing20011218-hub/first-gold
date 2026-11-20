@@ -87,6 +87,11 @@
   --shadow-none: 0 0 0 var(--color-ink);
 }
 
+/* 不支持 3D 时的替代图：和 SVG 的 viewBox（1440 × 520）一样的比例 */
+@utility aspect-fallback {
+  aspect-ratio: 1440 / 520;
+}
+
 /* 开局的三列：商品、发货方式（两张并排）、第一批进货 */
 @utility grid-cols-setup {
   grid-template-columns: 1fr 1.6fr 1fr;

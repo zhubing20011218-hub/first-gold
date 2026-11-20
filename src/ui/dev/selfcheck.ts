@@ -66,11 +66,13 @@ export function s1(): CheckResult {
   return { id: "S1", pass: bad.length === 0, offenders: bad.slice(0, 5) };
 }
 
-/** S3 没有小于 12 像素的文字（包括输入框里的字和 ::before、::after 里的字） */
+/** S3 没有小于 12 像素的文字（包括输入框里的字、::before 和 ::after 里的字、SVG 里的字） */
 export function s3(): CheckResult {
   const small = (st: CSSStyleDeclaration): boolean => parseFloat(st.fontSize) < 12;
   const bad: Element[] = textElements().filter((el) => small(getComputedStyle(el)));
   for (const el of Array.from(document.querySelectorAll("input, textarea, select")).filter(visible)) if (small(getComputedStyle(el))) bad.push(el);
+  // SVG 里的字会跟着图缩放：按画出来的高度算（12 像素的字，字框大约 12 像素高）
+  for (const el of Array.from(document.querySelectorAll("svg text")).filter(visible)) if (el.getBoundingClientRect().height < 12) bad.push(el);
   for (const el of Array.from(document.body.querySelectorAll("*")).filter(visible)) {
     for (const pseudo of ["::before", "::after"]) {
       const st = getComputedStyle(el, pseudo);

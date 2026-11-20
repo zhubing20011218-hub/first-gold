@@ -51,6 +51,21 @@ export function gableRoof(x: number, z: number, w: number, d: number, h: number,
   return shadowed(mesh);
 }
 
+/** 一根细绳：依次连起这些点（彩灯、彩旗的挂绳） */
+export function rope(points: THREE.Vector3[], m: THREE.Material): THREE.Group {
+  const g = new THREE.Group();
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    const len = a.distanceTo(b);
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, len, 4), m);
+    seg.position.copy(a).lerp(b, 0.5);
+    seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    g.add(seg);
+  }
+  return g;
+}
+
 export function group(...children: THREE.Object3D[]): THREE.Group {
   const g = new THREE.Group();
   for (const c of children) g.add(c);
@@ -61,7 +76,8 @@ export function group(...children: THREE.Object3D[]): THREE.Group {
 
 /** land-cn：沙色的边，草地（颜色跟季节变），一条横着的路，路中间有白色虚线 */
 export function landCn(grass: THREE.Material): THREE.Group {
-  const g = group(box(0, 0, 7.4, 10, 0.5, mat(W.sand)), box(0.25, 0.25, 6.9, 9.5, 0.04, grass, 0.5), box(0.25, 4.2, 6.9, 1, 0.05, mat(W.road), 0.5));
+  // 沙边：侧面用深一点的沙色，上面一层浅沙色
+  const g = group(box(0, 0, 7.4, 10, 0.46, mat(W.sandSide)), box(0, 0, 7.4, 10, 0.04, mat(W.sand), 0.46), box(0.25, 0.25, 6.9, 9.5, 0.04, grass, 0.5), box(0.25, 4.2, 6.9, 1, 0.05, mat(W.road), 0.5));
   for (let i = 0; i < 6; i++) g.add(box(0.6 + i * 1.1, 4.66, 0.55, 0.08, 0.06, mat(W.roadLine), 0.5));
   g.name = "land-cn";
   return g;
@@ -170,10 +186,13 @@ export function bareBranches(x: number, z: number): THREE.Group {
 
 /** sea：一整块水面，几条白色的短线表示浪 */
 export function sea(): THREE.Group {
-  const water = new THREE.Mesh(new THREE.BoxGeometry(27.4, 0.6, 12.4), mat(W.seaWater, { rough: 0.25, metal: 0.05 }));
-  water.position.set(12.5, -0.3, 5);
+  // 海：下面一层深一点的海，上面一层水面（粗糙度 0.25，稍微反光）
+  const deep = new THREE.Mesh(new THREE.BoxGeometry(27.4, 0.54, 12.4), mat(W.seaDeep, { rough: 0.25 }));
+  deep.position.set(12.5, -0.33, 5);
+  const water = new THREE.Mesh(new THREE.BoxGeometry(27.4, 0.06, 12.4), mat(W.seaWater, { rough: 0.25, metal: 0.05 }));
+  water.position.set(12.5, -0.03, 5);
   water.receiveShadow = true;
-  const g = group(water);
+  const g = group(deep, water);
   const waves: [number, number, number][] = [
     [8.2, 1, 1.6],
     [11.4, 2.2, 1.2],
@@ -345,10 +364,12 @@ export function festiveLights(): THREE.Group {
     [17.2, 5.6],
     [24.0, 5.6],
   ];
+  const ropePoints: THREE.Vector3[] = [];
   for (let i = 0; i <= 12; i++) {
     const x = line[0][0] + ((line[1][0] - line[0][0]) * i) / 12;
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), mat(W.lights[i % 4]));
     bulb.position.set(x, 1.7 - Math.sin((i / 12) * Math.PI) * 0.2, line[0][1]);
+    ropePoints.push(new THREE.Vector3(x, bulb.position.y + 0.07, line[0][1]));
     g.add(bulb);
     if (i % 3 === 1) {
       const k = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), mat(W.ketupat[i % 2]));
@@ -356,6 +377,7 @@ export function festiveLights(): THREE.Group {
       g.add(k);
     }
   }
+  g.add(rope(ropePoints, mat(W.chimneyCap)));
   g.name = "lights";
   return g;
 }
@@ -363,17 +385,20 @@ export function festiveLights(): THREE.Group {
 /** 年终大促：三色的彩旗和门口的礼盒 */
 export function bunting(): THREE.Group {
   const g = new THREE.Group();
+  const ropePoints: THREE.Vector3[] = [];
   for (let i = 0; i < 14; i++) {
     const f = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 3), mat(W.bunting[i % 3]));
     f.position.set(17.2 + i * 0.5, 1.6 - Math.sin((i / 13) * Math.PI) * 0.2, 5.6);
     f.rotation.x = Math.PI;
+    ropePoints.push(new THREE.Vector3(f.position.x, f.position.y + 0.11, 5.6));
     g.add(f);
   }
+  g.add(rope(ropePoints, mat(W.chimneyCap)));
+  // 礼盒放在房子的门口（门在房子南面，x + 1.0 到 x + 1.32）
   for (const [x, z] of [
-    [22.3, 3.9],
-    [23.7, 6.0],
-    [18.2, 7.6],
-    [20.2, 8.4],
+    [18.55, 7.75],
+    [20.6, 8.8],
+    [24.3, 7.7],
   ] as const) {
     const gift = box(x, z, 0.32, 0.32, 0.3, mat(W.gift), 0.54);
     g.add(gift, box(x + 0.13, z - 0.01, 0.06, 0.34, 0.31, mat(W.crane), 0.54));
@@ -387,13 +412,19 @@ export function umbrellas(): THREE.Group {
   const g = new THREE.Group();
   for (const [x, z] of [
     [18.6, 5.9],
-    [23.2, 3.6],
+    [15.75, 3.85],
   ] as const) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 6), mat(W.wall));
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 6), mat(W.umbrella[1]));
     pole.position.set(x, 1.05, z);
     const top = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.3, 8), mat(W.umbrella[0]));
     top.position.set(x, 1.65, z);
-    g.add(pole, top);
+    // 伞边一圈白色、伞顶一个白色的尖
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.03, 4, 16), mat(W.umbrella[1]));
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(x, 1.5, z);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 6), mat(W.umbrella[1]));
+    tip.position.set(x, 1.86, z);
+    g.add(pole, top, rim, tip);
   }
   g.name = "umbrellas";
   return shadowed(g);
