@@ -52,11 +52,11 @@ export function checkBulkStock(
     const projected = projectedQtyFor(s, bulk, product, params);
     if (projected >= bulk.qty) {
       s = { ...s, midChoices: { ...s.midChoices, [bulk.inquiryId]: "none" } };
-      events.push({ type: "bulk_on_track", day: state.day, inquiryId: bulk.inquiryId, projectedQty: projected });
+      events.push({ type: "bulk_on_track", day: state.day, inquiryId: bulk.inquiryId, qty: bulk.qty, projectedQty: projected });
     } else {
       const shortQty = bulk.qty - projected;
       s = { ...s, pending: { kind: "bulk_short", inquiryId: bulk.inquiryId, shortQty } };
-      events.push({ type: "bulk_short", day: state.day, inquiryId: bulk.inquiryId, shortQty });
+      events.push({ type: "bulk_short", day: state.day, inquiryId: bulk.inquiryId, qty: bulk.qty, shortQty });
       return { state: s, events, paused: true };
     }
   }

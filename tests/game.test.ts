@@ -428,6 +428,15 @@ describe("stepDay：其他几处规则", () => {
     const r3 = stepDay({ ...end, day: 88 }, hijab, P);
     expect(r3.state.phase).toBe("running");
   });
+  it("季末那天同时封店、现金又是负数：结局是封店，不再判成倒闭（D18）", () => {
+    const { state } = newGame("local", 100);
+    // 第 89 天，已经被审核过一次，风险值在高线上，现金是负数
+    const s0: GameState = { ...state, day: 89, stockQty: 0, cashFen: -500, riskPts: 90, auditCount: 1 };
+    const r = stepDay(s0, hijab, P);
+    expect(r.state.phase).toBe("banned");
+    expect(r.events.some((e) => e.type === "banned")).toBe(true);
+    expect(r.events.some((e) => e.type === "bankrupt")).toBe(false);
+  });
   it("收尾结束时现金小于 0 是倒闭，不小于 0 是结束", () => {
     const { state } = newGame("cross", 100);
     const closing: GameState = { ...state, day: 730, phase: "closing", stockQty: 0, orderBatches: [], bulkOrders: [] };

@@ -14,14 +14,14 @@ export type GameEvent =
   | E<"restock_arrived", { id: string; qty: number }>
   | E<"event_delay", { delayDays: number }>
   | E<"event_bad_review", { ratingE1: number }>
-  | E<"ads_ran", { budgetFen: number; adSpendFen: number; clicks: number; adOrders: number; refBidFen: number }>
-  | E<"orders_shipped", { organicOrders: number; adOrders: number; shipped: number; lost: number; perOrderFeeFen: number; payoutFenEach: number }>
+  | E<"ads_ran", { budgetFen: number; adSpendFen: number; clicks: number; adOrders: number; refBidFen: number; demandBp: number }>
+  | E<"orders_shipped", { organicOrders: number; adOrders: number; shipped: number; lost: number; perOrderFeeFen: number; payoutFenEach: number; demandBp: number }>
   | E<"orders_delivered", { orderDay: number; delivered: number; returned: number; settleDay: number }>
   | E<"payout_received", { orderDay: number; amountFen: number; orders: number; banned: boolean }>
   | E<"bulk_won", { inquiryId: string; unitPriceSen: number; effectiveSen: number; valueFen: number; depositFen: number; shipDay: number; warnDay: number }>
   | E<"bulk_lost", { inquiryId: string; unitPriceSen: number; effectiveSen: number; rivalBestSen: number }>
-  | E<"bulk_on_track", { inquiryId: string; projectedQty: number }>
-  | E<"bulk_short", { inquiryId: string; shortQty: number }>
+  | E<"bulk_on_track", { inquiryId: string; qty: number; projectedQty: number }>
+  | E<"bulk_short", { inquiryId: string; qty: number; shortQty: number }>
   | E<"rush_ordered", { inquiryId: string; id: string; qty: number; unitCostFen: number; totalFen: number; arriveDay: number }>
   | E<"mid_choice", { inquiryId: string; choice: MidChoice }>
   | E<"bulk_shipped", { inquiryId: string; qty: number; freightFen: number }>

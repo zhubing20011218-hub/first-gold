@@ -183,6 +183,7 @@ function retailDay(s: GameState, product: Product, params: Params, events: GameE
       clicks: ad.clicks,
       adOrders,
       refBidFen,
+      demandBp,
     });
   }
 
@@ -223,7 +224,7 @@ function retailDay(s: GameState, product: Product, params: Params, events: GameE
   s.quarterStats.wanted += wanted;
   s.quarterStats.lost += lost;
   if (wanted > 0) {
-    events.push({ type: "orders_shipped", day, organicOrders, adOrders, shipped, lost, perOrderFeeFen, payoutFenEach });
+    events.push({ type: "orders_shipped", day, organicOrders, adOrders, shipped, lost, perOrderFeeFen, payoutFenEach, demandBp });
   }
 }
 

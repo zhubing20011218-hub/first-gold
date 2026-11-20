@@ -6,7 +6,6 @@ import { products } from "../src/products/catalog";
 import { replay } from "../src/engine/replay";
 import { buildQuarterBills, verifyQuarter } from "../src/engine/bills";
 import { inTransitBatches, reservedQty } from "../src/engine/game";
-import { marketOfDay } from "../src/engine/market";
 import type { GameEvent } from "../src/engine/events";
 import type { Fulfillment } from "../src/engine/types";
 import { createRng, playGame, randomConfig, randomDecisions, withChoices, type Played } from "./helpers/play";
@@ -124,21 +123,31 @@ describe("整局必须成立的关系（200 个种子）", () => {
     expect(midNegative).toBeGreaterThan(0);
   });
 
-  it("7. 运气和决定无关：同一个种子、两组不同的决定，市场热度、事件日期、询价单完全相同", () => {
-    for (const r of results.slice(0, 60)) {
+  it("7. 运气和决定无关：200 个种子，两组不同的决定，两局都在进行的每一天 demandBp 相同；事件日期和询价单相同", () => {
+    let comparedDays = 0;
+    for (const r of results) {
       const other = playCase(r.c, 99);
-      const product = products[r.c.productIdx];
       expect(other.played.state.schedule).toEqual(r.played.state.schedule);
-      const datesOf = (evs: GameEvent[], type: "event_delay" | "event_bad_review", until: number) =>
-        evs.filter((e) => e.type === type && e.day < until).map((e) => e.day);
-      const until = Math.min(r.played.state.day, other.played.state.day);
-      expect(datesOf(other.played.events, "event_delay", until)).toEqual(datesOf(r.played.events, "event_delay", until));
-      expect(datesOf(other.played.events, "event_bad_review", until)).toEqual(datesOf(r.played.events, "event_bad_review", until));
-      // 对手出价和市场热度只由种子和日子决定
-      for (const e of r.played.events) {
-        if (e.type === "ads_ran") expect(e.refBidFen).toBe(marketOfDay(r.c.seed, e.day, product, P).refBidFen);
+      const demandByDay = (evs: GameEvent[]): Map<number, number> => {
+        const m = new Map<number, number>();
+        for (const e of evs) if (e.type === "orders_shipped" || e.type === "ads_ran") m.set(e.day, e.demandBp);
+        return m;
+      };
+      const a = demandByDay(r.played.events);
+      const b = demandByDay(other.played.events);
+      for (const [day, v] of a) {
+        const w = b.get(day);
+        if (w === undefined) continue;
+        expect(w, `种子 ${r.c.seed} 第 ${day} 天`).toBe(v);
+        comparedDays++;
       }
+      const until = Math.min(r.played.state.day, other.played.state.day);
+      const datesOf = (evs: GameEvent[], type: "event_delay" | "event_bad_review") => evs.filter((e) => e.type === type && e.day < until).map((e) => e.day);
+      expect(datesOf(other.played.events, "event_delay")).toEqual(datesOf(r.played.events, "event_delay"));
+      expect(datesOf(other.played.events, "event_bad_review")).toEqual(datesOf(r.played.events, "event_bad_review"));
     }
+    // 两组决定不一样，但比到的天数足够多
+    expect(comparedDays).toBeGreaterThan(20000);
   });
 
   it("8. 零售不动大单的货：零售发了货的那天，结束时库存不小于留给大单的货", () => {
@@ -164,6 +173,8 @@ describe("整局必须成立的关系（200 个种子）", () => {
     for (const { played } of results) {
       const audit = played.events.find((e) => e.type === "audit_started");
       if (!audit || audit.type !== "audit_started") continue;
+      // 冻结到 审核那天 + 1 + auditFreezeDays，期望值直接写出来（auditFreezeDays 是 30）
+      expect(audit.frozenUntilDay).toBe(audit.day + 1 + 30);
       const during = played.events.filter(
         (e) => e.type === "payout_received" && !e.banned && e.day > audit.day && e.day < audit.frozenUntilDay,
       );

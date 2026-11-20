@@ -5,7 +5,7 @@ import { createGame } from "../../src/engine/game";
 import { startQuarter } from "../../src/engine/quarter";
 import { stepDay } from "../../src/engine/day";
 import { answerPending } from "../../src/engine/pending";
-import { rushOrder, affordableQty } from "../../src/engine/stock";
+import { affordableQty } from "../../src/engine/stock";
 import type { GameEvent } from "../../src/engine/events";
 import type { Fulfillment, GameConfig, GameState, MidChoice, QuarterDecision } from "../../src/engine/types";
 import type { Params } from "../../src/engine/util";
@@ -54,7 +54,7 @@ export interface Played {
   pausedStepUnchanged: boolean;
 }
 
-/** 一天一天地玩。季度中间要选择时，按 chooser 选；加急补货付不起就改成不处理 */
+/** 一天一天地玩。季度中间要选择时，按 chooser 选 */
 export function playGame(
   config: GameConfig,
   decisions: QuarterDecision[],
@@ -89,10 +89,8 @@ export function playGame(
       // 关系 11：pending 时 stepDay 不改状态
       const same = stepDay(state, product, params);
       if (same.state !== state || same.events.length > 0) pausedStepUnchanged = false;
-      let choice = chooser(rng);
-      if (choice === "rush" && rushOrder(state.pending.shortQty, state.fulfillment, product, params).totalFen > state.cashFen) {
-        choice = "ignore";
-      }
+      // 加急补货不看现金（docs/04 第 3 版），现金可以变成负数
+      const choice = chooser(rng);
       choices.push({ inquiryId: state.pending.inquiryId, choice, quarter: q });
       const r = answerPending(state, choice, product, params);
       state = r.state;
