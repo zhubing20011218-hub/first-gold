@@ -12,10 +12,13 @@ export const color = {
   seaSoft: "#E3F4F3",
   line: "#C9D8D6",
   muted: "#5C7078",
+  /** sea、hibiscus 的"字用"颜色：小于 28 的字和上面放小字的底色（docs/08 第五节第 2 条，规则包第 12 版） */
+  seaText: "#0C7A77",
+  hibiscusText: "#C53A41",
   /** 禁用按钮的底色和字色 */
   disabledBg: "#E4EAEB",
   disabledText: "#8A9A9F",
-  /** 弹窗后面的暗色（docs/08 第五节第 5 条：不用半透明叠色做背景；遮罩不是背景，是盖在上面的一层） */
+  /** 弹窗后面变暗用 ink，不透明度 40%（docs/07 第二节；docs/08 第五节第 5 条：遮罩不算背景） */
   scrim: "#10212B",
 } as const;
 
@@ -39,8 +42,8 @@ export const size = {
   topBarHeight: 44,
   inquiryTop: 76,
   inquiryWidth: 236,
-  worldTop: 520,
-  areaHeight: 176,
+  worldTop: 492,
+  areaHeight: 204,
   barTop: 714,
   barHeight: 70,
   contentMax: 1440,

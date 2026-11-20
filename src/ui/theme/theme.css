@@ -16,6 +16,8 @@
   --color-sea-soft: #e3f4f3;
   --color-line: #c9d8d6;
   --color-muted: #5c7078;
+  --color-sea-text: #0c7a77;
+  --color-hibiscus-text: #c53a41;
   --color-disabled-bg: #e4eaeb;
   --color-disabled-text: #8a9a9f;
   --color-scrim: #10212b;
@@ -49,7 +51,9 @@
   /* 固定的尺寸（docs/08 第二节、docs/09 第四节） */
   --spacing-topbar: 44px;
   --spacing-inquiry: 236px;
-  --spacing-area: 176px;
+  --spacing-area: 204px;
+  /* 功能区里"现在的情况"每一行 22 高（docs/07 第四节） */
+  --spacing-row: 22px;
   --spacing-bar: 70px;
   --spacing-content: 1440px;
   --spacing-popup: 560px;
@@ -61,23 +65,23 @@
   --spacing-hit-desk: 32px;
   --spacing-figure: 132px;
   --spacing-figure-sm: 96px;
-  /* 弹窗：手机上最高到屏幕的 85%；电脑上不超出屏幕；P1 到 P4 在决定栏的正上方；P5 在推流分的正下方 */
+  /* 弹窗：手机上最高到屏幕的 85%；电脑上不超出屏幕；P1 到 P4 在前排（三个功能区）的正上方；P5 在推流分的正下方 */
   --spacing-sheet: 85dvh;
   --spacing-popup-max: calc(100dvh - 32px);
-  /* P1 到 P4 在前排的正上方：前排顶边是窗口底边往上 280 */
-  --spacing-popup-mid: 288px;
-  --spacing-popup-mid-max: calc(100dvh - 288px - 16px);
+  /* P1 到 P4 在前排的正上方：前排顶边是窗口底边往上 308（规则包第 13 版，前排 492 到 696） */
+  --spacing-popup-mid: 316px;
+  --spacing-popup-mid-max: calc(100dvh - 316px - 16px);
   --spacing-popup-top: 72px;
-  --spacing-world-top: 520px;
+  --spacing-world-top: 492px;
   --spacing-gallery-world: 480px;
-  /* 开局的三步选择占前排加底部的位置（520 到 784） */
-  --spacing-setup: 264px;
+  /* 开局的三步选择占前排加底部的位置（492 到 784） */
+  --spacing-setup: 292px;
 
   --shadow-*: initial;
-  --shadow-solid: 0 4px 0 #10212b;
-  --shadow-solid-sm: 0 3px 0 #10212b;
-  --shadow-dialog: 0 6px 0 #10212b;
-  --shadow-none: 0 0 0 #10212b;
+  --shadow-solid: 0 4px 0 var(--color-ink);
+  --shadow-solid-sm: 0 3px 0 var(--color-ink);
+  --shadow-dialog: 0 6px 0 var(--color-ink);
+  --shadow-none: 0 0 0 var(--color-ink);
 }
 
 /* 开局的三列：商品、发货方式（两张并排）、第一批进货 */

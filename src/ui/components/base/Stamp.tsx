@@ -14,11 +14,11 @@ export interface StampProps {
 export function Stamp({ text, tone, size = "sm", animate = false }: StampProps) {
   const reduce = useReducedMotion();
   const cls = clsx(
-    "inline-block rotate-6 rounded-control border-3 font-black whitespace-nowrap",
+    "inline-block rotate-6 rounded-control border-3 font-bold whitespace-nowrap",
     size === "lg" ? "px-6 py-2 text-screen" : "px-2 text-em",
     tone === "gold" && "border-gold-text text-gold-text",
-    tone === "sea" && "border-sea text-sea",
-    tone === "hibiscus" && "border-hibiscus text-hibiscus",
+    tone === "sea" && "border-sea-text text-sea-text",
+    tone === "hibiscus" && "border-hibiscus-text text-hibiscus-text",
   );
   if (!animate || reduce) return <span className={cls}>{text}</span>;
   return (

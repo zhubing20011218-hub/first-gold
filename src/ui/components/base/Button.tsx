@@ -8,10 +8,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: "md" | "lg";
   children: ReactNode;
+  /** 只给展示页用：静态地显示悬停、按下、焦点的样子（docs/09 第九节） */
+  look?: "hover" | "pressed" | "focus";
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "normal", size = "md", className, disabled, children, ...rest },
+  { variant = "normal", size = "md", className, disabled, children, look, ...rest },
   ref,
 ) {
   const solid = variant !== "text";
@@ -28,9 +30,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         solid && !disabled && "border-ink shadow-solid transition-transform duration-100 active:translate-y-1 active:shadow-none",
         disabled && solid && "border-disabled-text bg-disabled-bg text-disabled-text shadow-none",
         !disabled && variant === "primary" && "bg-gold text-ink hover:brightness-105",
-        !disabled && variant === "confirm" && "bg-sea text-paper hover:brightness-110",
+        !disabled && variant === "confirm" && "bg-sea-text text-paper hover:brightness-110",
         !disabled && variant === "normal" && "bg-paper text-ink hover:bg-sea-soft",
-        variant === "text" && "rounded-control px-2 text-sea underline-offset-4 hover:underline disabled:text-disabled-text",
+        variant === "text" && "rounded-control px-2 text-sea-text underline-offset-4 hover:underline disabled:text-disabled-text",
+        look === "hover" && variant === "normal" && "bg-sea-soft",
+        look === "hover" && (variant === "primary" || variant === "confirm") && "brightness-105",
+        look === "hover" && variant === "text" && "underline",
+        look === "pressed" && solid && "translate-y-1 shadow-none",
+        look === "focus" && "outline-2 outline-offset-2 outline-sea",
         className,
       )}
       {...rest}

@@ -18,7 +18,7 @@ export function MoneyText({ kind, amount, yuanFen, money = false, className }: M
   const negative = amount < 0;
   const text = kind === "yuan" ? formatYuan(amount) : formatRM(amount);
   return (
-    <span className={clsx("num whitespace-nowrap", negative ? "text-hibiscus" : money && "text-gold-text", className)}>
+    <span className={clsx("num whitespace-nowrap", negative ? "text-hibiscus-text" : money && "text-gold-text", className)}>
       {text}
       {kind === "price" && yuanFen !== undefined && <span className="ml-1 text-cap text-muted">{zh.paren(formatYuan(yuanFen))}</span>}
     </span>

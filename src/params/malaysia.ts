@@ -162,7 +162,7 @@ export const malaysia = {
     value: 30000,
     unit: "fen",
     source: "C",
-    note: "每月固定开支（三个 AI 员工的订阅费）",
+    note: "每月固定开支（店铺工具和杂费）",
     public: true,
   },
   stockSalvageBp: {

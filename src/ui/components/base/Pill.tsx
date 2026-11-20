@@ -15,7 +15,7 @@ export function Pill({ children, onClick, tone = "paper", label, className }: Pi
     "inline-flex h-topbar items-center gap-2 rounded-full border-2 border-ink px-4 whitespace-nowrap",
     tone === "paper" && "bg-paper",
     tone === "soft" && "bg-gold-soft",
-    tone === "warn" && "bg-paper text-hibiscus",
+    tone === "warn" && "bg-paper text-hibiscus-text",
     className,
   );
   if (onClick) {

@@ -1,5 +1,5 @@
 // 规则检查：读取源代码的文字，查有没有违反约定（docs/11 第 2.2 节，docs/02 第八节第 5 条）。
-// 这里有 R1、R2、R3、R5、R6、R7、R8。R4、R9、R10 在任务 06 出现对应代码时加上。
+// 这里有 R1 到 R10（R4、R9、R10 从任务 06 第一步起）。
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -22,6 +22,25 @@ function listFiles(dir: string): string[] {
     const p = join(abs, name);
     if (statSync(p).isDirectory()) out.push(...listFiles(relative(ROOT, p)));
     else if (CODE_EXT.test(name)) out.push(relative(ROOT, p));
+  }
+  return out;
+}
+
+/** 一个文件夹里所有的 .css 文件 */
+function listCss(dir: string): string[] {
+  const abs = join(ROOT, dir);
+  let entries: string[];
+  try {
+    entries = readdirSync(abs);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
+  }
+  const out: string[] = [];
+  for (const name of entries) {
+    const p = join(abs, name);
+    if (statSync(p).isDirectory()) out.push(...listCss(relative(ROOT, p)));
+    else if (name.endsWith(".css")) out.push(relative(ROOT, p));
   }
   return out;
 }
@@ -155,15 +174,27 @@ describe("规则检查", () => {
     expect(hits, show(hits)).toEqual([]);
   });
 
-  it("R4 src/ui、src/scene 里没有直接写的颜色值（设计变量的文件 src/ui/theme/tokens.ts 除外）", () => {
-    const files = uiLike.filter((f) => f !== join("src", "ui", "theme", "tokens.ts"));
-    expect(files.length).toBeGreaterThan(5);
-    const hits = findHits(files, /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])/, { code: true });
+  it("R4 src/ui、src/scene 的代码和 CSS 里没有直接写的颜色值（tokens.ts 和 theme.css 的 @theme 里 --color- 变量除外）", () => {
+    const code = uiLike.filter((f) => f !== join("src", "ui", "theme", "tokens.ts"));
+    expect(code.length).toBeGreaterThan(5);
+    const COLOR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_])|\b(?:rgba?|hsla?)\(/;
+    const hits = findHits(code, COLOR, { code: true });
+    for (const file of [...listCss("src/ui"), ...listCss("src/scene")]) {
+      const isTheme = file === join("src", "ui", "theme", "theme.css");
+      const text = readFileSync(join(ROOT, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+      let inTheme = false;
+      text.split("\n").forEach((line, idx) => {
+        if (/^@theme\b/.test(line.trim())) inTheme = true;
+        const allowed = isTheme && inTheme && /^\s*--color-[a-z-]+:\s*#[0-9a-fA-F]{6}\s*;\s*$/.test(line);
+        if (COLOR.test(line) && !allowed) hits.push({ file, line: idx + 1, text: line.trim() });
+        if (inTheme && line.trim() === "}") inTheme = false;
+      });
+    }
     expect(hits, show(hits)).toEqual([]);
   });
 
-  it("R9 src/ui、src/scene 的类名里没有 Tailwind 的任意值（-[ 这种写法）", () => {
-    const hits = findHits(uiLike, /[a-z0-9]-\[[^\]]+\]/, { code: true }).filter((h) => /class|clsx|cn\(|["'`]/.test(h.text));
+  it("R9 src/ui、src/scene 里没有 Tailwind 的任意值（-[ 和 -(-- 这两种写法，多行的字符串也查）", () => {
+    const hits = findHits(uiLike, /(?:^|[\s"'`])[a-z][a-z0-9:-]*-(?:\[[^\]]*\]|\(--[^)]*\))/, { code: true });
     expect(hits, show(hits)).toEqual([]);
   });
 
@@ -183,7 +214,9 @@ describe("规则检查", () => {
 
   it("R6 整个 src 里没有真实平台和聊天软件的名字", () => {
     const names = [
-      "tiktok",
+      "tik\\s*tok",
+      "zalora",
+      "lazmall",
       "抖音",
       "shopee",
       "虾皮",

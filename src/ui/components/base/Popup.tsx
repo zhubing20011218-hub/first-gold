@@ -1,8 +1,9 @@
 // 弹窗的外框（docs/09 第四节），用 Radix 的 Dialog 做：焦点、Esc、遮罩。
-// 三种位置：居中（mid，决定栏的正上方）、顶部右边（top-right）、右边滑出（side）、正中（center）。手机上都从底部升起。
+// 四种位置：正中偏下（mid，前排的正上方）、顶部右边（top-right）、右边滑出（side）、正中（center）。手机上都从底部升起。
+// 关闭后焦点回到打开它的那个按钮（docs/09 第四节第 3 条）：打开时记下当时有焦点的元素，关闭时还给它。
 import * as Dialog from "@radix-ui/react-dialog";
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { zh } from "../../../text/zh";
 
 export type PopupPlace = "mid" | "top-right" | "side" | "center";
@@ -31,6 +32,16 @@ const widthClass: Record<PopupWidth, string> = {
 };
 
 export function Popup({ open, title, description, place, width, dismissible = true, onClose, footer, children, testId }: PopupProps) {
+  const opener = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  // open 刚变成 true 的这一次渲染，弹窗还没拿走焦点：记下打开它的元素
+  if (open && !wasOpen.current && typeof document !== "undefined") {
+    const el = document.activeElement;
+    opener.current = el instanceof HTMLElement && el !== document.body ? el : null;
+  }
+  useEffect(() => {
+    wasOpen.current = open;
+  }, [open]);
   return (
     <Dialog.Root open={open} onOpenChange={(o) => !o && dismissible && onClose()}>
       <Dialog.Portal>
@@ -39,6 +50,14 @@ export function Popup({ open, title, description, place, width, dismissible = tr
           data-popup={testId}
           onEscapeKeyDown={(e) => !dismissible && e.preventDefault()}
           onPointerDownOutside={(e) => !dismissible && e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            const back = opener.current;
+            opener.current = null;
+            if (back && back.isConnected) {
+              e.preventDefault();
+              back.focus();
+            }
+          }}
           className={clsx(
             "fixed z-30 flex flex-col border-2 border-ink bg-paper shadow-dialog outline-none",
             "max-md:inset-x-0 max-md:bottom-0 max-md:max-h-sheet max-md:rounded-t-dialog",

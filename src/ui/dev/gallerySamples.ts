@@ -19,6 +19,8 @@ export const gallerySamples = {
   priceRm: 19.9,
   rivalBidFen: 36,
   lastWanted: 812,
+  bulkQuotes: 2,
+  bulkPriceSen: 1050,
   lastLost: 23,
   moneyOnWayFen: 125000,
   sureInFen: 82000,

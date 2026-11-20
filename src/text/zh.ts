@@ -254,6 +254,10 @@ export const zh = {
     seasons: ["春 · 开斋节", "夏 · 淡季", "秋 · 平常", "冬 · 年终大促"],
     stockTiers: ["少", "中", "多"],
     models: "每一样模型",
+    looks: { hover: "悬停", pressed: "按下", focus: "焦点" } as Record<string, string>,
+    buttonLooks: "Button 的状态",
+    itemStatus: "每件事的状态",
+    places: { mid: "正中偏下", "top-right": "顶部右边", side: "右边滑出", center: "正中" } as Record<string, string>,
     /** docs/10 第三节的模型编号对应的名字；最后四个是季节的布置 */
     modelNames: {
       "land-cn": "中国的地",
@@ -280,6 +284,24 @@ export const zh = {
       umbrellas: "遮阳伞（淡季）",
       bunting: "彩旗（年终大促）",
     } as Record<string, string>,
+  },
+
+  /** 工作台里每件事的状态（docs/07 第 6.10 节） */
+  itemStatus: {
+    onWay: "在路上",
+    waitSign: "等签收",
+    waitPay: "等到账",
+    preparing: "备货中",
+    arrived: "已到货",
+    paid: "已到账",
+    delivered: "已交货",
+    settled: "已结清",
+    reduced: "被减少",
+    short: "货不够",
+    frozen: "被冻结",
+    stockout: "缺货",
+    lost: "没中标",
+    defaulted: "违约",
   },
 
   /** 纪念海报（docs/10 第九节） */

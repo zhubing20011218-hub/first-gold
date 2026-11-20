@@ -22,7 +22,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
           onClick={() => onChange(o.value)}
           className={clsx(
             "min-h-hit-desk rounded-control px-4 text-body font-bold whitespace-nowrap max-md:min-h-hit",
-            o.value === value ? "bg-sea text-paper" : "text-ink hover:bg-sea-soft",
+            o.value === value ? "bg-sea-text text-paper" : "text-ink hover:bg-sea-soft",
             disabled && "text-disabled-text",
           )}
         >

@@ -1,5 +1,5 @@
 // 一个功能区（docs/07 第四节、docs/09 第 3.2 节）：标题和状态标签、现在的情况、参考数字、这个季度的决定和"改"按钮。
-// 只负责摆放，内容由 DecideLayer 按功能区填进来。
+// 只负责摆放，内容由 DecideLayer 按功能区填进来。内边距 16；决定放在最下面，运营区的"零售"和"大单"上下两行（规则包第 13 版，204 高）。
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import { Tag } from "../base/Tag";
@@ -37,33 +37,37 @@ export function AreaPanel({ area, state, rows, reference, actions, onOpenDesk, r
       data-area={area}
       aria-label={zh.areas[area]}
       className={clsx(
-        "relative flex h-area min-w-0 flex-col gap-1 rounded-control border-2 border-ink px-4 py-3 max-md:h-auto",
+        "relative flex h-area min-w-0 flex-col rounded-control border-2 border-ink p-4 max-md:h-auto max-md:gap-1",
         state === "notSet" ? "bg-paper" : "bg-sea-soft",
       )}
     >
-      {reminder && <div className="absolute -top-3 left-4 z-15 -translate-y-full">{reminder}</div>}
+      {reminder && (
+        <div data-reminder className="absolute -top-3 left-4 z-15 -translate-y-full">
+          {reminder}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <button type="button" onClick={onOpenDesk} className="flex min-h-hit-desk items-center gap-2 text-title font-bold hover:underline max-md:min-h-hit">
           <AreaIcon area={area} />
           {zh.areas[area]}
         </button>
-        <Tag text={tag} tone={state === "notSet" ? "hibiscus" : state === "set" ? "sea" : "ink"} />
+        <Tag text={tag} tone={state} />
       </div>
       <dl className="flex flex-col">
         {rows.map((r, i) => (
-          <div key={i} className="flex items-baseline justify-between gap-3 text-body">
+          <div key={i} className="flex h-row items-baseline justify-between gap-3 text-body">
             <dt className="text-muted">{r.label}</dt>
             <dd className="num text-em">{r.value}</dd>
           </div>
         ))}
       </dl>
-      <div className="text-cap text-muted md:truncate">{reference}</div>
-      <div className="mt-auto flex flex-col gap-1">
+      <div className="text-cap whitespace-nowrap text-muted">{reference}</div>
+      <div className="mt-auto flex flex-col gap-1 pt-1">
         {actions.map((a, i) => (
-          <div key={i} className="flex items-center justify-between gap-2">
+          <div key={i} className="flex min-w-0 items-center justify-between gap-2">
             <div className="flex min-w-0 items-baseline gap-2">
               <span className="shrink-0 text-cap text-muted">{a.label}</span>
-              <span className="truncate text-em font-bold">{a.note ?? a.value}</span>
+              <span className={a.note ? "text-body whitespace-nowrap text-muted" : "num text-title font-bold whitespace-nowrap"}>{a.note ?? a.value}</span>
             </div>
             {a.onChange && !a.note && (
               <button

@@ -8,7 +8,7 @@ import { Explain } from "../components/base/Explain";
 import { MoneyText } from "../components/base/MoneyText";
 import { NumberText } from "../components/base/NumberText";
 import { Pill } from "../components/base/Pill";
-import { Popup } from "../components/base/Popup";
+import { Popup, type PopupPlace } from "../components/base/Popup";
 import { Segmented } from "../components/base/Segmented";
 import { Stamp } from "../components/base/Stamp";
 import { Stepper } from "../components/base/Stepper";
@@ -16,6 +16,7 @@ import { Tag } from "../components/base/Tag";
 import { AreaPanel } from "../components/biz/AreaPanel";
 import { AreaIcon } from "../components/biz/AreaIcon";
 import { zh } from "../../text/zh";
+import { formatRM } from "../store/selectors";
 import { gallerySamples as S } from "./gallerySamples";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -38,7 +39,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 export function Gallery() {
   const g = zh.gallery;
-  const [popup, setPopup] = useState(false);
+  const [popup, setPopup] = useState<PopupPlace | null>(null);
   const [coach, setCoach] = useState(true);
   const [seg, setSeg] = useState<"no" | "yes">("yes");
   const [qty, setQty] = useState(S.stepperQty);
@@ -58,9 +59,15 @@ export function Gallery() {
             <Button variant="normal" disabled>
               {g.variants.disabled}
             </Button>
-            <Button variant="normal" autoFocus>
-              {zh.area.change}
-            </Button>
+          </Row>
+          <Row label={g.buttonLooks}>
+            {(["primary", "confirm", "normal", "text"] as const).flatMap((v) =>
+              (["hover", "pressed", "focus"] as const).map((look) => (
+                <Button key={`${v}-${look}`} variant={v} look={look} tabIndex={-1}>
+                  {`${g.variants[v]} · ${g.looks[look]}`}
+                </Button>
+              )),
+            )}
           </Row>
           <Row label="Pill">
             <Pill label={zh.status.cash}>
@@ -99,6 +106,9 @@ export function Gallery() {
             <div className="w-56">
               <Stepper label={zh.popups.price} value={S.priceRm} step={1} decimals={2} unit={zh.input.rm} disabled onChange={() => undefined} />
             </div>
+            <div className="w-56">
+              <Stepper label={`${zh.popups.price} · ${g.looks.focus}`} value={S.priceRm} step={1} decimals={2} unit={zh.input.rm} look="focus" onChange={() => undefined} />
+            </div>
           </Row>
           <Row label="Segmented">
             <Segmented
@@ -120,29 +130,42 @@ export function Gallery() {
             </div>
           </Row>
           <Row label="Tag">
-            <Tag text={zh.area.stateSet} tone="purchase" />
-            <Tag text={zh.area.stateCarried} tone="ops" />
-            <Tag text={zh.area.stateNotSet} tone="finance" />
-            <Tag text={zh.area.change} tone="ink" />
+            <Tag text={zh.area.stateNotSet} tone="notSet" />
+            <Tag text={zh.area.stateSet} tone="set" />
+            <Tag text={zh.area.stateCarried} tone="carried" />
             <Tag text={zh.timeline.season[3]} tone="gold" />
+            <Tag text={zh.status.riskLevel.low} tone="sea" />
+            <Tag text={zh.status.riskLevel.mid} tone="gold" />
             <Tag text={zh.status.riskLevel.high} tone="hibiscus" />
             <Tag text={zh.area.later} tone="muted" />
-            <Tag text={zh.areas.purchase} tone="sea" />
+            <Tag text={zh.areas.purchase} tone="purchase" />
+            <Tag text={zh.areas.ops} tone="ops" />
+            <Tag text={zh.areas.finance} tone="finance" />
+          </Row>
+          <Row label={g.itemStatus}>
+            <Tag text={zh.itemStatus.onWay} tone="gold" />
+            <Tag text={zh.itemStatus.arrived} tone="set" />
+            <Tag text={zh.itemStatus.short} tone="hibiscus" />
+            <Tag text={zh.itemStatus.lost} tone="muted" />
           </Row>
           <Row label="Popup">
-            <Button onClick={() => setPopup(true)}>{zh.popups.stock.title}</Button>
+            {(["mid", "top-right", "side", "center"] as const).map((place) => (
+              <Button key={place} onClick={() => setPopup(place)}>
+                {g.places[place]}
+              </Button>
+            ))}
             <Popup
-              open={popup}
+              open={popup !== null}
               title={zh.popups.stock.title}
               description={zh.popups.stock.desc}
-              place="mid"
-              width="popup"
-              onClose={() => setPopup(false)}
+              place={popup ?? "mid"}
+              width={popup === "top-right" ? "popup-push" : popup === "side" ? "popup-source" : popup === "center" ? "popup-short" : "popup"}
+              onClose={() => setPopup(null)}
               testId="gallery"
               footer={
                 <>
-                  <Button onClick={() => setPopup(false)}>{zh.ui.cancel}</Button>
-                  <Button variant="confirm" onClick={() => setPopup(false)}>
+                  <Button onClick={() => setPopup(null)}>{zh.ui.cancel}</Button>
+                  <Button variant="confirm" onClick={() => setPopup(null)}>
                     {zh.ui.confirm}
                   </Button>
                 </>
@@ -183,7 +206,10 @@ export function Gallery() {
               area="ops"
               state="set"
               onOpenDesk={() => undefined}
-              rows={[{ label: zh.area.lastQuarter, value: zh.area.lastQuarterValue(String(S.lastWanted), String(S.lastLost)) }]}
+              rows={[
+                { label: zh.area.lastQuarter, value: zh.area.lastQuarterValue(String(S.lastWanted), String(S.lastLost)) },
+                { label: zh.status.push, value: <NumberText value={S.push} delta={S.pushDelta} /> },
+              ]}
               reference={
                 <>
                   {zh.area.refPrice} <MoneyText kind="rm" amount={S.priceSen} />
@@ -193,7 +219,7 @@ export function Gallery() {
               }
               actions={[
                 { label: zh.area.retail, value: <MoneyText kind="rm" amount={S.priceSen} />, onChange: () => undefined },
-                { label: zh.area.bulk, value: null, note: zh.area.later },
+                { label: zh.area.bulk, value: zh.area.bulkValue(String(S.bulkQuotes), formatRM(S.bulkPriceSen)), onChange: () => undefined },
               ]}
             />
             <AreaPanel

@@ -14,9 +14,11 @@ export interface StepperProps {
   error?: string | null;
   disabled?: boolean;
   onChange: (value: number) => void;
+  /** 只给展示页用：静态地显示焦点的样子 */
+  look?: "focus";
 }
 
-export function Stepper({ label, value, step, decimals = 0, unit, error, disabled = false, onChange }: StepperProps) {
+export function Stepper({ label, value, step, decimals = 0, unit, error, disabled = false, onChange, look }: StepperProps) {
   const id = useId();
   const round = (x: number): number => Number(x.toFixed(decimals));
   return (
@@ -26,7 +28,9 @@ export function Stepper({ label, value, step, decimals = 0, unit, error, disable
       </label>
       <div
         className={clsx(
-          "flex h-12 items-stretch rounded-control border-2 bg-paper",
+          // 焦点在输入框里时，整个框有 2 像素的 sea 外框（docs/08 第十节）
+          "flex h-12 items-stretch rounded-control border-2 bg-paper focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sea",
+          look === "focus" && "outline-2 outline-offset-2 outline-sea",
           error ? "border-hibiscus" : "border-ink",
           disabled && "border-disabled-text bg-disabled-bg",
         )}
@@ -51,7 +55,7 @@ export function Stepper({ label, value, step, decimals = 0, unit, error, disable
           {zh.ui.plusSign}
         </button>
       </div>
-      {error && <p className="text-cap text-hibiscus">{error}</p>}
+      {error && <p className="text-cap text-hibiscus-text">{error}</p>}
     </div>
   );
 }
