@@ -12,7 +12,7 @@ import { buildReport, summarize, type Row, type SandboxCheck } from "./sim/repor
 
 const SEEDS = 300;
 const ROUTES: Route[] = ["cross", "local", "upgrade"];
-const STRATEGIES = ["conservative", "balanced", "aggressive", "bulkOnly", "random"] as const;
+const STRATEGIES = ["conservative", "balanced", "aggressive", "bulkOnly", "random", "reference"] as const;
 
 interface WorkerOut {
   rows: Row[];

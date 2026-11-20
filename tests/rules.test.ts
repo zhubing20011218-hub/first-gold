@@ -206,11 +206,11 @@ describe("规则检查", () => {
     expect([...anyHits, ...ignoreHits], show([...anyHits, ...ignoreHits])).toEqual([]);
   });
 
-  it("模拟脚本只引用 engine、params、products（任务 04）", () => {
+  it("模拟脚本只引用 engine、params、products、plan（任务 04、05）", () => {
     const files = [...listFiles("scripts/sim"), "scripts/simulate.ts"].filter((f) => f.endsWith(".ts"));
     expect(files.length).toBeGreaterThan(1);
-    // 只允许 node: 开头的内置模块、同一个文件夹里的文件、src/engine、src/params、src/products
-    const hits = badImports(files, /^(?!node:|\.\/|(\.\.\/)+src\/(engine|params|products)\/)/);
+    // 只允许 node: 开头的内置模块、同一个文件夹里的文件、src/engine、src/params、src/products、src/plan
+    const hits = badImports(files, /^(?!node:|\.\/|(\.\.\/)+src\/(engine|params|products|plan)\/)/);
     expect(hits, show(hits)).toEqual([]);
   });
 

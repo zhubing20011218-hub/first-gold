@@ -7,8 +7,9 @@ import { applyBp } from "../../src/engine/money";
 import { marketOfDay } from "../../src/engine/market";
 import { riskLevel } from "../../src/engine/summary";
 import { rushOrder } from "../../src/engine/stock";
+import { referencePlan } from "../../src/plan/keyDecision";
 
-export type StrategyId = "conservative" | "balanced" | "aggressive" | "bulkOnly" | "random";
+export type StrategyId = "conservative" | "balanced" | "aggressive" | "bulkOnly" | "random" | "reference";
 
 export const STRATEGY_NAMES: Record<string, string> = {
   conservative: "保守",
@@ -16,6 +17,7 @@ export const STRATEGY_NAMES: Record<string, string> = {
   aggressive: "激进",
   bulkOnly: "只做大单",
   random: "随机",
+  reference: "参考做法",
 };
 
 /** 一种打法：每个季度第一天给出决定；季度中间要选择时给出选择 */
@@ -123,6 +125,13 @@ export function makeStrategies(product: Product, params: Params): Record<Strateg
           buyCompliance: riskAtLeastMid(ctx),
         };
       },
+      midChoice: () => "ignore",
+    },
+    reference: {
+      id: "reference",
+      firstStockBp: () => 4000,
+      // 每个季度都用 docs/06 第八节的参考做法；升级按店铺路线
+      decide: (ctx) => ({ ...referencePlan(ctx.state, product, params), upgradeToLocal: ctx.upgrade }),
       midChoice: () => "ignore",
     },
     random: {

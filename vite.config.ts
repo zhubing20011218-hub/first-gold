@@ -9,5 +9,7 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
+    // 整局的测试一条要 3 到 4 秒，电脑忙的时候会超过默认的 5 秒
+    testTimeout: 20000,
   },
 });
