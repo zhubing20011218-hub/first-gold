@@ -1,5 +1,4 @@
 // 页面自检（docs/13 第四节）。截图脚本和 ?debug=1 的面板共用这一份。
-// 任务 06 第一步只有 S1、S3、S4、S7；S12、S13、S14 在第三步加上。
 // 只读页面，不改任何东西。
 
 export interface CheckResult {
@@ -31,6 +30,16 @@ function readerOnly(el: Element): boolean {
   return st.position === "absolute" && r.width <= 1 && r.height <= 1;
 }
 
+/** 打开的弹窗后面的东西不算（S14） */
+function behindPopup(el: Element): boolean {
+  const popup = document.querySelector("[data-popup]");
+  return popup !== null && !popup.contains(el);
+}
+
+function overlap(a: DOMRect, b: DOMRect, tolerance = 1): boolean {
+  return a.left < b.right - tolerance && b.left < a.right - tolerance && a.top < b.bottom - tolerance && b.top < a.bottom - tolerance;
+}
+
 function textElements(): HTMLElement[] {
   const out: HTMLElement[] = [];
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -40,7 +49,7 @@ function textElements(): HTMLElement[] {
     const el = n.parentElement;
     if (!el || seen.has(el) || el.closest(".sr-only, svg, script, style, [aria-hidden='true']")) continue;
     seen.add(el);
-    if (visible(el)) out.push(el);
+    if (visible(el) && !readerOnly(el)) out.push(el);
   }
   return out;
 }
@@ -96,6 +105,8 @@ export function s4(): CheckResult {
   const min = window.innerWidth < 1024 ? 44 : 32;
   const bad = Array.from(document.querySelectorAll(TAPPABLE)).filter((el) => {
     if (!visible(el)) return false;
+    // 文字里的解释链接：电脑上不算（规则包第 18 版），手机上照样要 44
+    if (min === 32 && el.hasAttribute("data-explain")) return false;
     const r = el.getBoundingClientRect();
     return r.width < min - 0.5 || r.height < min - 0.5;
   });
@@ -164,6 +175,7 @@ export function s7(): CheckResult {
   }
   for (const region of Array.from(document.querySelectorAll("[data-region]")).filter(visible)) {
     for (const child of Array.from(region.querySelectorAll("*")).filter(visible)) {
+      if (child.closest("[data-reminder]")) continue;
       const parent = child.parentElement;
       if (parent && out(child.getBoundingClientRect(), parent.getBoundingClientRect())) {
         spill.push(`${describe(region)} > ${describe(child)}`);
@@ -175,8 +187,39 @@ export function s7(): CheckResult {
   return { id: "S7", pass: all.length === 0, offenders: all.slice(0, 5) };
 }
 
+/** S12 世界里的小牌子互相不重叠，也不盖住三个功能区 */
+export function s12(): CheckResult {
+  const labels = Array.from(document.querySelectorAll("[data-world-label]")).filter(visible);
+  const areas = Array.from(document.querySelectorAll("[data-area]")).filter(visible);
+  const bad: string[] = [];
+  for (let i = 0; i < labels.length; i++) {
+    const a = labels[i].getBoundingClientRect();
+    for (let j = i + 1; j < labels.length; j++) if (overlap(a, labels[j].getBoundingClientRect())) bad.push(`${describe(labels[i])} × ${describe(labels[j])}`);
+    for (const c of areas) if (overlap(a, c.getBoundingClientRect())) bad.push(`${describe(labels[i])} × ${describe(c)}`);
+  }
+  return { id: "S12", pass: bad.length === 0, offenders: bad.slice(0, 5) };
+}
+
+/** S13 时间线、状态、询价、前排、决定栏这五个区互相不重叠 */
+export function s13(): CheckResult {
+  const regions = Array.from(document.querySelectorAll("[data-region]")).filter(visible);
+  const bad: string[] = [];
+  for (let i = 0; i < regions.length; i++) {
+    for (let j = i + 1; j < regions.length; j++) {
+      if (overlap(regions[i].getBoundingClientRect(), regions[j].getBoundingClientRect())) bad.push(`${describe(regions[i])} × ${describe(regions[j])}`);
+    }
+  }
+  return { id: "S13", pass: bad.length === 0, offenders: bad.slice(0, 5) };
+}
+
+/** S14 画面上只有一个主要按钮（弹窗打开时，弹窗后面的不算） */
+export function s14(): CheckResult {
+  const primaries = Array.from(document.querySelectorAll("[data-primary]")).filter((el) => visible(el) && !behindPopup(el));
+  return { id: "S14", pass: primaries.length <= 1, offenders: primaries.length <= 1 ? [] : primaries.slice(0, 5).map(describe) };
+}
+
 export function runSelfcheck(): CheckResult[] {
-  return [s1(), s3(), s4(), s7()];
+  return [s1(), s3(), s4(), s7(), s12(), s13(), s14()];
 }
 
 declare global {

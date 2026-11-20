@@ -152,7 +152,7 @@ export const zh = {
     rivalBid: "对手出价",
     retail: "零售",
     bulk: "大单",
-    retailValue: (price: string, bid: string, budget: string): string => `${price} · 出价 ${bid} · 每天 ${budget}`,
+    retailValue: (price: string, bid: string, budget: string): string => `${price} · ${bid} · ${budget}`,
     bulkValue: (n: string, price: string): string => `报 ${n} 张 · ${price}`,
     bulkNone: "不报",
     moneyOnWay: "路上的货款",

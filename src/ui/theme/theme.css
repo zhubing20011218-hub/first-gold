@@ -75,12 +75,16 @@
   --spacing-popup-mid: 316px;
   --spacing-popup-mid-max: calc(100dvh - 316px - 16px);
   --spacing-popup-top: 72px;
+  /* 手机上时间线下面的位置（询价和状态从这里开始） */
+  --spacing-under-bar: 64px;
   --spacing-world-top: 492px;
   /* 替代图最宽 1362（1440 × 492 / 520），这时高正好是 492 */
   --spacing-fallback: 1362px;
   --spacing-gallery-world: 480px;
   /* 开局的三步选择占前排加底部的位置（492 到 784） */
   --spacing-setup: 292px;
+  /* 手机上开局面板最多占下面三分之二，上面三分之一留给世界（docs/07 第五节） */
+  --spacing-setup-m: calc(67dvh - 16px);
 
   --shadow-*: initial;
   --shadow-solid: 0 4px 0 var(--color-ink);

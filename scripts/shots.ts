@@ -21,7 +21,9 @@ const SIZES: [number, number][] = [
  *  任务 06 第二步：展示页（含世界和每一样模型）和四个季节；第三步再加各个页面。 */
 export const PAGES: { name: string; query: string; scrolls?: boolean; world?: boolean }[] = [
   { name: "gallery", query: "?gallery=1", scrolls: true, world: true },
-  ...[0, 1, 2, 3].map((n) => ({ name: `season-${n}`, query: `?demo=season-${n}`, world: true })),
+  ...["home", "setup", "decide", "popup-stock", "popup-retail", "popup-bulk", "popup-risk", "popup-push", "popup-source", "season-0", "season-1", "season-2", "season-3"].map(
+    (n) => ({ name: n, query: `?demo=${n}`, world: true }),
+  ),
 ];
 
 interface CheckResult {
@@ -85,8 +87,10 @@ async function main(): Promise<void> {
   const sizes = pick(SIZES, process.env.SHOTS_SIZE, ([w, h]) => `${w}x${h}`);
   const pages = pick(PAGES, process.env.SHOTS_PAGE, (p) => p.name);
   const partial = sizes.length !== SIZES.length || pages.length !== PAGES.length;
-  const server = await preview({ preview: { port: 4179, strictPort: true }, logLevel: "error" });
-  const base = "http://localhost:4179/";
+  // 端口可以用 SHOTS_PORT 换（两个文件夹同时跑截图时不撞）
+  const port = Number(process.env.SHOTS_PORT ?? 4179);
+  const server = await preview({ preview: { port, strictPort: true }, logLevel: "error" });
+  const base = `http://localhost:${port}/`;
   const browser = await chromium.launch();
   const all: PageResult[] = [];
   try {

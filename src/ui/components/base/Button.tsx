@@ -22,7 +22,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type="button"
       disabled={disabled}
-      data-primary={variant === "primary" && !disabled ? "" : undefined}
+      data-primary={variant === "primary" && !disabled && !look ? "" : undefined}
       className={clsx(
         "inline-flex min-h-hit items-center justify-center gap-2 font-bold whitespace-nowrap select-none md:min-h-hit-desk",
         size === "lg" ? "px-6 py-3 text-title" : "px-4 py-2 text-em",

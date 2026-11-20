@@ -12,7 +12,7 @@ export interface PillProps {
 
 export function Pill({ children, onClick, tone = "paper", label, className }: PillProps) {
   const cls = clsx(
-    "inline-flex h-topbar items-center gap-2 rounded-full border-2 border-ink px-4 whitespace-nowrap",
+    "inline-flex h-topbar items-center gap-2 rounded-full border-2 border-ink px-4 whitespace-nowrap max-md:gap-1 max-md:px-2",
     tone === "paper" && "bg-paper",
     tone === "soft" && "bg-gold-soft",
     tone === "warn" && "bg-paper text-hibiscus-text",
