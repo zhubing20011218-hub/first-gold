@@ -2,10 +2,11 @@
 import { describe, expect, it } from "vitest";
 import { malaysia as P } from "../src/params/malaysia";
 import { getProduct } from "../src/products/catalog";
-import { createGame, reservedQty } from "../src/engine/game";
+import { createGame } from "../src/engine/game";
 import { startQuarter } from "../src/engine/quarter";
 import { stepDay } from "../src/engine/day";
-import { answerPending } from "../src/engine/pending";
+import { answerPending, projectedQtyFor } from "../src/engine/pending";
+import { dayRng } from "../src/engine/dayRng";
 import { restockCostFen } from "../src/engine/stock";
 import type { GameEvent } from "../src/engine/events";
 import type { Fulfillment, GameState, MidChoice, QuarterDecision } from "../src/engine/types";
@@ -64,6 +65,15 @@ function advance(
     events.push(...r.events);
   }
   return { state, events, started };
+}
+
+/** 现金等式（docs/04 第 14.6 节第 2 条）：只记进累计数、不动现金的错误会被它抓到 */
+function expectCashIdentity(s: GameState): void {
+  const t = s.totals;
+  expect(s.cashFen).toBe(
+    s.config.startCashFen - t.setupFeeFen - t.complianceFen - t.restockFen - t.adSpendFen - t.perOrderFeeFen -
+      t.fixedCostFen - t.storageFen + t.payoutFen + t.bulkInFen - t.bulkOutFen,
+  );
 }
 
 function deepFreeze<T>(o: T): T {
@@ -234,23 +244,27 @@ function toBulkQuarter(fulfillment: Fulfillment, restockQ0: number, restockQ1: n
 }
 
 describe("大单", () => {
-  it("中标收定金；零售不卖留给大单的货", () => {
+  it("中标收定金", () => {
     const { state, inquiry, events } = toBulkQuarter("cross", 300, 300);
     const bulk = state.bulkOrders[0];
     expect(events.find((e) => e.type === "bulk_won")).toMatchObject({ inquiryId: inquiry.id, depositFen: bulk.depositFen });
-    let s = state;
-    const evs: GameEvent[] = [];
-    while (s.day < bulk.shipDay) {
-      if (s.pending) s = answerPending(s, "ignore", hijab, P).state;
-      const r = stepDay(s, hijab, P);
-      const before = s;
-      s = r.state;
-      evs.push(...r.events);
-      const shipped = r.events.find((e) => e.type === "orders_shipped");
-      if (shipped && shipped.type === "orders_shipped" && shipped.shipped > 0 && before.stockQty >= reservedQty(before)) {
-        expect(s.stockQty).toBeGreaterThanOrEqual(reservedQty(s));
-      }
-    }
+    expect(state.cashFen - bulk.depositFen).toBeGreaterThanOrEqual(0);
+    expectCashIdentity(state);
+  });
+  it("零售不卖留给大单的货：库存只比留货多 3 件时，零售最多发 3 件，留的货一件不少", () => {
+    const { state } = toBulkQuarter("cross", 0, 0, 300);
+    const bulk = state.bulkOrders[0];
+    // 库存只比留货多 3 件；降到最低价、猛投广告，让来单远多于 3 单
+    const s0: GameState = { ...state, stockQty: bulk.qty + 3, priceSen: hijab.minPriceSen, adBidFen: 90, adDailyBudgetFen: 20000 };
+    const r = stepDay(s0, hijab, P);
+    const shipped = r.events.find((e) => e.type === "orders_shipped");
+    expect(shipped && shipped.type === "orders_shipped" ? shipped.organicOrders + shipped.adOrders : 0).toBeGreaterThan(3);
+    expect(shipped).toMatchObject({ shipped: 3 });
+    expect(r.state.stockQty).toBe(bulk.qty);
+    // 第二天一件都不能再卖
+    const r2 = stepDay(r.state, hijab, P);
+    expect(r2.events.find((e) => e.type === "orders_shipped")).toMatchObject({ shipped: 0 });
+    expect(r2.state.stockQty).toBe(bulk.qty);
   });
   it("按时发货：付运费，dueDay 交货、信誉加 2，dueDay + 30 收到尾款", () => {
     const { state } = toBulkQuarter("cross", 500, 500, 500);
@@ -308,11 +322,19 @@ describe("大单", () => {
       bulkRep: 2,
     });
     expect(r.state.bulkRep).toBe(2);
-    // 违约那天的现金变化里包含退定金和违约金
-    const dayEvents = r.events.filter((e) => e.day === bulk.shipDay);
-    expect(dayEvents.some((e) => e.type === "bulk_defaulted")).toBe(true);
     expect(cashBefore).toBeGreaterThan(0);
     expect(r.state.totals.bulkOutFen).toBe(bulk.depositFen + penalty);
+    // 现金真的扣了：现金等式成立，并且违约那一天单独算一次，现金少了定金加违约金（再加上当天其他的收支）
+    expectCashIdentity(r.state);
+    const before = advance(state, bulk.shipDay, () => decision(), "ignore", 1).state;
+    const one = stepDay(before, hijab, P);
+    const otherFen =
+      one.state.totals.payoutFen - before.totals.payoutFen -
+      (one.state.totals.perOrderFeeFen - before.totals.perOrderFeeFen) -
+      (one.state.totals.adSpendFen - before.totals.adSpendFen) -
+      (one.state.totals.restockFen - before.totals.restockFen) -
+      (one.state.totals.fixedCostFen - before.totals.fixedCostFen);
+    expect(one.state.cashFen - before.cashFen).toBe(otherFen - bulk.depositFen - penalty);
     expect(r.state.quarterStats.bulkDefaults).toBe(1);
   });
   it("answerPending：没有在等选择时抛出错误；加急补货付不起时抛出错误", () => {
@@ -335,24 +357,37 @@ describe("本土店的风险", () => {
     if (!audit || audit.type !== "audit_started" || !ban || ban.type !== "banned") return;
     expect(ban.day).toBeGreaterThan(audit.day);
     expect(r.state.phase).toBe("banned");
-    const paidDuringAudit = r.events.filter(
-      (e) => e.type === "payout_received" && !e.banned && e.day > audit.day && e.day < audit.frozenUntilDay,
-    );
-    expect(paidDuringAudit).toEqual([]);
-    // 封店时拿回的：每一批按 applyBp(件数 × 每单打款, 5000)
+    // 审核：冻结到 审核那天 + 1 + 30 天（docs/04 第八节，auditFreezeDays 是 30）。期望值直接写出来
+    expect(P.auditFreezeDays.value).toBe(30);
+    expect(audit.day % 90).toBe(89);
+    expect(audit.frozenUntilDay).toBe(audit.day + 31);
+    const normalPays = r.events.filter((e) => e.type === "payout_received" && !e.banned);
+    // 冻结期间（审核第二天到解冻前一天）一笔都没有到账
+    expect(normalPays.filter((e) => e.day > audit.day && e.day < audit.day + 31)).toEqual([]);
+    // 审核之前每天都有到账（不是因为本来就没货款），解冻那天积压的一起到账
+    expect(normalPays.filter((e) => e.day > audit.day - 10 && e.day <= audit.day).length).toBeGreaterThan(5);
+    expect(normalPays.filter((e) => e.day === audit.day + 31).length).toBeGreaterThan(10);
+    // 封店时拿回的：每一批 applyBp((件数 − 退货) × 每单打款, 5000)，件数和退货从最后的状态里取
+    expect(P.banPayoutBp.value).toBe(5000);
     const banPays = r.events.filter((e) => e.type === "payout_received" && e.banned);
     expect(banPays.length).toBeGreaterThan(0);
-    const total = banPays.reduce((s, e) => s + (e.type === "payout_received" ? e.amountFen : 0), 0);
-    expect(ban.recoveredFen).toBe(total);
-    // 每一批拿回的正好是 applyBp(单数 × 每单打款, banPayoutBp)，也就是一半
-    expect(P.banPayoutBp.value).toBe(5000);
+    let expectedTotal = 0;
+    let withReturns = 0;
     for (const e of banPays) {
       if (e.type !== "payout_received") continue;
-      const shipped = r.events.find((x) => x.type === "orders_shipped" && x.day === e.orderDay);
-      const each = shipped && shipped.type === "orders_shipped" ? shipped.payoutFenEach : -1;
-      expect(each).toBeGreaterThan(0);
-      expect(e.amountFen).toBe(Math.floor((e.orders * each * 5000 + 5000) / 10000));
+      const batch = r.state.orderBatches.find((b) => b.orderDay === e.orderDay);
+      expect(batch).toBeTruthy();
+      if (!batch) continue;
+      const orders = batch.qty - (batch.returnedQty ?? 0);
+      if ((batch.returnedQty ?? 0) > 0) withReturns++;
+      const expected = Math.floor((orders * batch.payoutFenEach * 5000 + 5000) / 10000);
+      expect(e.amountFen).toBe(expected);
+      expectedTotal += expected;
     }
+    // 这个场景里有退过货的批次，才测得出"要减退货"
+    expect(withReturns).toBeGreaterThan(0);
+    expect(ban.recoveredFen).toBe(expectedTotal);
+    expectCashIdentity(r.state);
     expect(r.state.orderBatches.every((b) => b.paid)).toBe(true);
   });
   it("一直是跨境直发：没有审核和封店，风险值一直是 0", () => {
@@ -364,5 +399,150 @@ describe("本土店的风险", () => {
     const r = advance(newGame("local", 300).state, 900, () => decision({ monthlyRestockQty: 150, buyCompliance: true }), "ignore");
     expect(r.events.some((e) => e.type === "banned")).toBe(false);
     expect(r.events.filter((e) => e.type === "compliance_bought").length).toBeGreaterThan(0);
+  });
+});
+
+describe("stepDay：其他几处规则", () => {
+  it("现金变成负数就倒闭，并且有事件", () => {
+    const { state } = newGame("cross", 100, 11, 120000);
+    // 没有库存（不会发货、不扣每单费用），只看月初的固定开支 30000：现金 29999 扣完是 -1
+    const s0: GameState = { ...state, cashFen: 29999, stockQty: 0 };
+    const r = stepDay(s0, hijab, P);
+    expect(r.state.phase).toBe("bankrupt");
+    expect(r.events.at(-1)).toMatchObject({ type: "bankrupt", day: 0 });
+    expect(r.state.cashFen).toBe(-1);
+    // 扣完正好是 0 不算倒闭
+    const s1: GameState = { ...state, cashFen: 30000, stockQty: 0 };
+    const r1 = stepDay(s1, hijab, P);
+    expect(r1.state.cashFen).toBe(0);
+    expect(r1.state.phase).toBe("running");
+  });
+  it("退货：每一单用 dayRng(种子, 下单那天, 5) 依次取 int(0, 9999)，小于退货率就是退货", () => {
+    const r = advance(newGame("cross", 500).state, 150, () => decision({ monthlyRestockQty: 100 }));
+    const delivered = r.events.filter((e) => e.type === "orders_delivered");
+    expect(delivered.length).toBeGreaterThan(30);
+    let totalReturned = 0;
+    for (const e of delivered) {
+      if (e.type !== "orders_delivered") continue;
+      const rng = dayRng(11, e.orderDay, 5);
+      let expected = 0;
+      for (let i = 0; i < e.delivered; i++) if (rng.int(0, 9999) < 300) expected++;
+      expect(e.returned).toBe(expected);
+      totalReturned += e.returned;
+    }
+    expect(totalReturned).toBeGreaterThan(0);
+  });
+  it("运输延误：跨境直发时，还没签收的订单批次都晚 3 天", () => {
+    const g = newGame("cross", 500);
+    const delayDay = g.state.schedule.delayDays[0];
+    const before = advance(g.state, delayDay, () => decision({ monthlyRestockQty: 100 }), "ignore").state;
+    const after = stepDay(before, hijab, P);
+    expect(after.events.find((e) => e.type === "event_delay")).toMatchObject({ day: delayDay, delayDays: 3 });
+    const waiting = before.orderBatches.filter((b) => b.returnedQty === null);
+    expect(waiting.length).toBeGreaterThan(3);
+    for (const b of waiting) {
+      const now = after.state.orderBatches.find((x) => x.orderDay === b.orderDay);
+      expect(now?.deliverDay).toBe(b.deliverDay + 3);
+    }
+    expect(after.state.monthStats.delayed).toBe(true);
+  });
+  it("运输延误：本土店时，还没到货的补货都晚 3 天", () => {
+    const g = newGame("local", 300);
+    const delayDay = g.state.schedule.delayDays[0];
+    const before = advance(g.state, delayDay, () => decision({ monthlyRestockQty: 100 }), "ignore").state;
+    const after = stepDay(before, hijab, P);
+    const waiting = before.restockBatches.filter((b) => b.arriveDay > delayDay);
+    expect(waiting.length).toBeGreaterThan(0);
+    for (const b of waiting) expect(after.state.restockBatches.find((x) => x.id === b.id)?.arriveDay).toBe(b.arriveDay + 3);
+    // 跨境直发的订单不受影响
+    for (const b of before.orderBatches.filter((x) => x.returnedQty === null)) {
+      expect(after.state.orderBatches.find((x) => x.orderDay === b.orderDay)?.deliverDay).toBe(b.deliverDay);
+    }
+  });
+});
+
+describe("大单的货够不够（docs/04 第十六节）", () => {
+  it("projected = 现有库存 + 发货前到的补货 + 发货前还会有的月初补货 − 更早要发的大单", () => {
+    const { state } = toBulkQuarter("cross", 0, 0, 300);
+    const bulk = { ...state.bulkOrders[0], shipDay: 150, qty: 400 };
+    const earlier = { ...state.bulkOrders[0], inquiryId: "earlier", shipDay: 140, qty: 70 };
+    const later = { ...state.bulkOrders[0], inquiryId: "later", shipDay: 160, qty: 90 };
+    const s: GameState = {
+      ...state,
+      day: 100,
+      stockQty: 120,
+      monthlyRestockQty: 200,
+      bulkOrders: [earlier, bulk, later],
+      restockBatches: [
+        { id: "a", orderDay: 90, qty: 50, unitCostFen: 900, arriveDay: 99, rush: false }, // 已经到了，不算
+        { id: "b", orderDay: 98, qty: 30, unitCostFen: 900, arriveDay: 101, rush: false }, // 算
+        { id: "c", orderDay: 99, qty: 40, unitCostFen: 900, arriveDay: 151, rush: false }, // 发货后才到，不算
+      ],
+    };
+    // 跨境直发 lead 3：第 120 天（123 ≤ 150）算，第 150 天（153 > 150）不算 → 1 个月 × 200
+    // 120 + 30 + 200 − 70 = 280
+    expect(projectedQtyFor(s, bulk, hijab, P)).toBe(280);
+    // 本土店 lead 13：第 120 天 133 ≤ 150 也算
+    expect(projectedQtyFor({ ...s, fulfillment: "local" }, bulk, hijab, P)).toBe(280);
+    // 月补货量超过供应商上限时按上限
+    expect(projectedQtyFor({ ...s, monthlyRestockQty: 5000 }, bulk, hijab, P)).toBe(120 + 30 + 800 - 70);
+  });
+});
+
+/** 对这个季度的每一张询价单按对手的价报价（一定中标） */
+function quoteAll(q: number, s: GameState): QuarterDecision["bulkQuotes"] {
+  return s.schedule.inquiries.filter((i) => i.quarter === q).map((i) => ({ inquiryId: i.id, unitPriceSen: i.rivalBestSen }));
+}
+
+describe("现金等式每天都成立（docs/04 第 14.6 节第 2 条）", () => {
+  it("跨境、本土店、中途升级、做合规、投广告、抢大单、加急补货：每一天结束时都成立", () => {
+    const plans: { f: Fulfillment; d: (q: number, s: GameState) => QuarterDecision; pending: MidChoice }[] = [
+      { f: "cross", d: (q, s) => decision({ monthlyRestockQty: 60, adBidFen: 40, adDailyBudgetFen: 3000, bulkQuotes: quoteAll(q, s) }), pending: "rush" },
+      { f: "local", d: () => decision({ monthlyRestockQty: 150, buyCompliance: true, adBidFen: 30, adDailyBudgetFen: 2000 }), pending: "ignore" },
+      { f: "local", d: (q, s) => decision({ monthlyRestockQty: 60, bulkQuotes: quoteAll(q, s) }), pending: "rush" },
+      { f: "cross", d: (q, s) => decision({ monthlyRestockQty: 400, bulkQuotes: quoteAll(q, s) }), pending: "ignore" },
+      {
+        f: "cross",
+        d: (q, s) =>
+          decision({
+            monthlyRestockQty: 100,
+            upgradeToLocal: q === 2,
+            buyCompliance: q > 2,
+            bulkQuotes: quoteAll(q, s),
+          }),
+        pending: "ignore",
+      },
+    ];
+    let days = 0;
+    const seen = new Set<string>();
+    for (const p of plans) {
+      let state = newGame(p.f, 300).state;
+      let started = -1;
+      while (state.phase === "running" || state.phase === "closing") {
+        const q = Math.floor(state.day / 90);
+        if (state.phase === "running" && state.day % 90 === 0 && started < q) {
+          const sq = startQuarter(state, p.d(q, state), hijab, P);
+          for (const e of sq.events) seen.add(e.type);
+          state = sq.state;
+          started = q;
+          expectCashIdentity(state);
+        }
+        if (state.pending) {
+          const ap = answerPending(state, p.pending, hijab, P);
+          for (const e of ap.events) seen.add(e.type);
+          state = ap.state;
+          expectCashIdentity(state);
+          continue;
+        }
+        const r = stepDay(state, hijab, P);
+        for (const e of r.events) seen.add(e.type);
+        state = r.state;
+        expectCashIdentity(state);
+        days++;
+      }
+    }
+    expect(days).toBeGreaterThan(1500);
+    // 确认这几局真的走到了每一种收支
+    for (const t of ["bulk_shipped", "bulk_paid", "bulk_defaulted", "compliance_bought", "payout_received", "rush_ordered", "upgraded"]) expect(seen.has(t), t).toBe(true);
   });
 });
