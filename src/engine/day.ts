@@ -10,7 +10,7 @@ import { checkBulkStock } from "./pending";
 import type { Product } from "./product";
 import { computePushScore, emptyMonthStats, pricePoints, pushBpOf } from "./push";
 import { settleOrder } from "./settle";
-import { affordableQty, headHaulFen, restockCostFen, storageFeeFen } from "./stock";
+import { headHaulFen, restockCostFen, storageFeeFen } from "./stock";
 import type { GameState } from "./types";
 import { riskLevel } from "./summary";
 import type { Params } from "./util";
@@ -49,15 +49,14 @@ function monthStart(s: GameState, product: Product, params: Params, events: Game
   s.monthStats = emptyMonthStats();
   events.push({ type: "month_started", day, fixedCostFen, storageFeeFen: storage, push });
 
-  // 1.5 自动补货
+  // 1.5 自动补货：按玩家定的件数补，模型不替玩家改（docs/04 第 3 版）。只受供应商上限限制，不看现金够不够；
+  // 现金不够时照样付，现金变成负数，季末再结（第 11 步）
   const wantedQty = s.monthlyRestockQty;
   if (wantedQty > 0) {
     const capQty = product.supplierMonthlyCap;
-    const canQty = affordableQty(s.cashFen, s.fulfillment, product, params);
-    let qty = Math.min(wantedQty, capQty, canQty);
-    if (qty < product.moq) qty = 0;
+    const qty = Math.min(wantedQty, capQty);
     if (qty !== wantedQty) {
-      events.push({ type: "restock_reduced", day, wantedQty, actualQty: qty, capQty, affordableQty: canQty });
+      events.push({ type: "restock_reduced", day, wantedQty, actualQty: qty, capQty });
     }
     if (qty > 0) {
       const cost = restockCostFen(qty, s.fulfillment, product, params);
@@ -324,7 +323,8 @@ export function stepDay(state: GameState, product: Product, params: Params): Ste
   if (running && s.fulfillment === "local" && day % 90 === 89) quarterEndRisk(s, params, events); // 10
 
   // 11. 检查（封店、倒闭之后这一局结束，但这一天照样算过完，day 照样加 1）
-  if (s.phase !== "banned" && s.cashFen < 0) {
+  // 季度中间现金可以是负数；季末结账时付不起才倒闭（docs/04 第 3 版、docs/06 第四节）
+  if (s.phase === "running" && day % 90 === 89 && s.cashFen < 0) {
     s.phase = "bankrupt";
     events.push({ type: "bankrupt", day, cashFen: s.cashFen });
   }
@@ -337,8 +337,13 @@ export function stepDay(state: GameState, product: Product, params: Params): Ste
     s.orderBatches.every((b) => b.paid) &&
     s.bulkOrders.every((b) => b.status === "paid" || b.status === "defaulted")
   ) {
-    s.phase = "finished";
-    events.push({ type: "finished", day, cashFen: s.cashFen });
+    if (s.cashFen < 0) {
+      s.phase = "bankrupt";
+      events.push({ type: "bankrupt", day, cashFen: s.cashFen });
+    } else {
+      s.phase = "finished";
+      events.push({ type: "finished", day, cashFen: s.cashFen });
+    }
   }
   // 12.
   s.day = day + 1;

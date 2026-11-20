@@ -9,7 +9,8 @@ export type GameEvent =
   | E<"setup_paid", { feeFen: number }>
   | E<"month_started", { fixedCostFen: number; storageFeeFen: number; push: PushResult }>
   | E<"restock_ordered", { id: string; qty: number; unitCostFen: number; discountBp: number; goodsFen: number; headHaulFen: number; totalFen: number; arriveDay: number }>
-  | E<"restock_reduced", { wantedQty: number; actualQty: number; capQty: number; affordableQty: number }>
+  /** 被供应商上限减少 */
+  | E<"restock_reduced", { wantedQty: number; actualQty: number; capQty: number }>
   | E<"restock_arrived", { id: string; qty: number }>
   | E<"event_delay", { delayDays: number }>
   | E<"event_bad_review", { ratingE1: number }>

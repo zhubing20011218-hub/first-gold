@@ -106,12 +106,22 @@ describe("整局必须成立的关系（200 个种子）", () => {
     }
   });
 
-  it("6. 每天结束时，除了 bankrupt，cashFen 不小于 0", () => {
+  it("6. 每个季度最后一天结束时，以及 finished 时，除了 bankrupt 和 banned，cashFen 不小于 0；季度中间可以是负数", () => {
+    let midNegative = 0;
     for (const { played } of results) {
       for (const s of played.states) {
-        if (s.phase !== "bankrupt") expect(s.cashFen).toBeGreaterThanOrEqual(0);
+        const quarterEnd = s.day % 90 === 0 && s.day <= 720;
+        if (s.phase !== "bankrupt" && s.phase !== "banned" && quarterEnd) expect(s.cashFen).toBeGreaterThanOrEqual(0);
+        if (s.phase === "finished") expect(s.cashFen).toBeGreaterThanOrEqual(0);
+        if (s.phase === "running" && !quarterEnd && s.cashFen < 0) midNegative++;
+      }
+      if (played.state.phase === "bankrupt") {
+        const e = played.events.find((x) => x.type === "bankrupt");
+        expect(e && (e.day % 90 === 89 || e.day >= 720)).toBe(true);
       }
     }
+    // 确认这 200 局里真的出现过"季度中间是负数但没倒闭"
+    expect(midNegative).toBeGreaterThan(0);
   });
 
   it("7. 运气和决定无关：同一个种子、两组不同的决定，市场热度、事件日期、询价单完全相同", () => {

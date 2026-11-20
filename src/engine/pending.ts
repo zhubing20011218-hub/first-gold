@@ -74,9 +74,7 @@ export function answerPending(state: GameState, choice: MidChoice, product: Prod
 
   if (choice === "rush") {
     const rush = rushOrder(pending.shortQty, s.fulfillment, product, params);
-    if (s.cashFen < rush.totalFen) {
-      throw new Error(`not enough cash for rush restock: need ${rush.totalFen}, have ${s.cashFen}`);
-    }
+    // 不看现金够不够：现金可以变成负数，季末再结（docs/04 第 3 版）
     const id = nextRestockId(s, day);
     const arriveDay = day + rush.leadDays;
     s = {

@@ -171,16 +171,14 @@ describe("stepDay：补货", () => {
     expect(r.events.find((e) => e.type === "restock_reduced")).toMatchObject({ wantedQty: 1000, actualQty: 800 });
     expect(r.events.find((e) => e.type === "restock_ordered" && e.day === 0 && e.id !== "R1-01")).toMatchObject({ qty: 800 });
   });
-  it("钱不够时件数被减少到买得起的；低于起订量就不补", () => {
-    const g = newGame("cross", 100, 3, 200000);
-    // 开局后现金 110000，月初扣固定开支 30000，剩 80000，买得起 88 件
+  it("现金不够时照样按玩家定的件数补，现金可以变成负数（docs/04 第 3 版）", () => {
+    const g = newGame("cross", 100, 3, 150000);
+    // 开局后现金 60000，月初扣固定开支 30000，剩 30000；要补 300 件（300 件是起订量的 6 倍，便宜 5%，每件 855）
     const r = advance(g.state, 1, () => decision({ monthlyRestockQty: 300 }));
-    expect(r.events.find((e) => e.type === "restock_reduced")).toMatchObject({ wantedQty: 300, actualQty: 88 });
-    const g2 = newGame("cross", 100, 3, 150000);
-    // 开局后 60000，扣固定开支剩 30000，只买得起 33 件，低于起订量 50
-    const r2 = advance(g2.state, 1, () => decision({ monthlyRestockQty: 300 }));
-    expect(r2.events.find((e) => e.type === "restock_reduced")).toMatchObject({ wantedQty: 300, actualQty: 0 });
-    expect(r2.events.filter((e) => e.type === "restock_ordered")).toHaveLength(0);
+    expect(r.events.some((e) => e.type === "restock_reduced")).toBe(false);
+    expect(r.events.find((e) => e.type === "restock_ordered")).toMatchObject({ qty: 300, totalFen: 256500 });
+    expect(r.state.cashFen).toBeLessThan(0);
+    expect(r.state.phase).toBe("running");
   });
   it("跨境直发 3 天到货，本土店 13 天", () => {
     const c = advance(newGame("cross").state, 20, () => decision({ monthlyRestockQty: 100 }));
@@ -337,11 +335,14 @@ describe("大单", () => {
     expect(one.state.cashFen - before.cashFen).toBe(otherFen - bulk.depositFen - penalty);
     expect(r.state.quarterStats.bulkDefaults).toBe(1);
   });
-  it("answerPending：没有在等选择时抛出错误；加急补货付不起时抛出错误", () => {
+  it("answerPending：没有在等选择时抛出错误；加急补货不看现金，现金可以变成负数", () => {
     const { state } = newGame("cross");
     expect(() => answerPending(state, "rush", hijab, P)).toThrow(/pending/);
     const poor: GameState = { ...state, cashFen: 0, pending: { kind: "bulk_short", inquiryId: "q1-1", shortQty: 100 } };
-    expect(() => answerPending(poor, "rush", hijab, P)).toThrow(/not enough cash/);
+    const r = answerPending(poor, "rush", hijab, P);
+    expect(r.state.cashFen).toBe(-108000);
+    expect(r.state.pending).toBeNull();
+    expect(r.state.restockBatches.at(-1)).toMatchObject({ qty: 100, rush: true });
   });
 });
 
@@ -406,19 +407,36 @@ describe("本土店的风险", () => {
 });
 
 describe("stepDay：其他几处规则", () => {
-  it("现金变成负数就倒闭，并且有事件", () => {
+  it("季度中间现金是负数不倒闭；季末那天结账时小于 0 才倒闭（docs/04 第 3 版）", () => {
     const { state } = newGame("cross", 100, 11, 120000);
-    // 没有库存（不会发货、不扣每单费用），只看月初的固定开支 30000：现金 29999 扣完是 -1
+    // 没有库存（不发货、不扣每单费用），月初扣固定开支 30000：现金 29999 扣完是 -1，但这是季度中间
     const s0: GameState = { ...state, cashFen: 29999, stockQty: 0 };
     const r = stepDay(s0, hijab, P);
-    expect(r.state.phase).toBe("bankrupt");
-    expect(r.events.at(-1)).toMatchObject({ type: "bankrupt", day: 0 });
     expect(r.state.cashFen).toBe(-1);
-    // 扣完正好是 0 不算倒闭
-    const s1: GameState = { ...state, cashFen: 30000, stockQty: 0 };
-    const r1 = stepDay(s1, hijab, P);
-    expect(r1.state.cashFen).toBe(0);
-    expect(r1.state.phase).toBe("running");
+    expect(r.state.phase).toBe("running");
+    expect(r.events.some((e) => e.type === "bankrupt")).toBe(false);
+    // 季末那天（第 89 天）结束时现金是 -1：倒闭
+    const end: GameState = { ...state, day: 89, cashFen: -1, stockQty: 0 };
+    const r1 = stepDay(end, hijab, P);
+    expect(r1.state.phase).toBe("bankrupt");
+    expect(r1.events.at(-1)).toMatchObject({ type: "bankrupt", day: 89, cashFen: -1 });
+    expect(r1.state.day).toBe(90);
+    // 季末那天正好是 0：不倒闭
+    const r2 = stepDay({ ...end, cashFen: 0 }, hijab, P);
+    expect(r2.state.phase).toBe("running");
+    // 第 88 天现金是负数：还没到季末，不倒闭
+    const r3 = stepDay({ ...end, day: 88 }, hijab, P);
+    expect(r3.state.phase).toBe("running");
+  });
+  it("收尾结束时现金小于 0 是倒闭，不小于 0 是结束", () => {
+    const { state } = newGame("cross", 100);
+    const closing: GameState = { ...state, day: 730, phase: "closing", stockQty: 0, orderBatches: [], bulkOrders: [] };
+    const bad = stepDay({ ...closing, cashFen: -5 }, hijab, P);
+    expect(bad.state.phase).toBe("bankrupt");
+    expect(bad.events.at(-1)).toMatchObject({ type: "bankrupt", cashFen: -5 });
+    const good = stepDay({ ...closing, cashFen: 0 }, hijab, P);
+    expect(good.state.phase).toBe("finished");
+    expect(good.events.at(-1)).toMatchObject({ type: "finished", cashFen: 0 });
   });
   it("退货：每一单用 dayRng(种子, 下单那天, 5) 依次取 int(0, 9999)，小于退货率就是退货", () => {
     const r = advance(newGame("cross", 500).state, 150, () => decision({ monthlyRestockQty: 100 }));

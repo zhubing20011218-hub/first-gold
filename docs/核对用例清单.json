@@ -2,17 +2,89 @@
   "note": "每一组核对用例有几条、从哪个任务开始必须有。npm run check 的 K5 读这个文件。说明见 docs/13-检查员.md 第 2.3 节。",
   "titleFormat": "[组的编号#两位数的序号] 例如 [G03-10.1#01]",
   "groups": [
-    { "id": "G03-10.3", "source": "docs/03 第 10.3 节 money.ts", "count": 17, "task": 1 },
-    { "id": "G03-5", "source": "docs/03 第五节 跨境运费", "count": 13, "task": 2 },
-    { "id": "G03-10.1", "source": "docs/03 第 10.1 节 settleOrder", "count": 11, "task": 2 },
-    { "id": "G03-10.2", "source": "docs/03 第 10.2 节 unitProfit", "count": 4, "task": 2 },
-    { "id": "G05-4", "source": "docs/05 第四节 六种商品两种发货方式", "count": 12, "task": 3 },
-    { "id": "G04-14.1", "source": "docs/04 第 14.1 节 推流分", "count": 3, "task": 3 },
-    { "id": "G04-14.2", "source": "docs/04 第 14.2 节 广告", "count": 9, "task": 3 },
-    { "id": "G04-14.3", "source": "docs/04 第 14.3 节 5 条价格系数加 1 条自然订单", "count": 6, "task": 3 },
-    { "id": "G04-14.4", "source": "docs/04 第 14.4 节 B1 到 B3 加 1 条 B2 的后续", "count": 4, "task": 3 },
-    { "id": "G04-14.5", "source": "docs/04 第 14.5 节 4 条进货价格加 1 条仓储费", "count": 5, "task": 3 },
-    { "id": "G04-15", "source": "docs/04 第十五节 加急补货", "count": 2, "task": 3 },
-    { "id": "G06-10", "source": "docs/06 第十节 采购、运营、财务各一条", "count": 3, "task": 5 }
+    {
+      "id": "G03-10.3",
+      "source": "docs/03 第 10.3 节 money.ts",
+      "count": 17,
+      "task": 1
+    },
+    {
+      "id": "G03-5",
+      "source": "docs/03 第五节 跨境运费",
+      "count": 13,
+      "task": 2
+    },
+    {
+      "id": "G03-10.1",
+      "source": "docs/03 第 10.1 节 settleOrder",
+      "count": 11,
+      "task": 2
+    },
+    {
+      "id": "G03-10.2",
+      "source": "docs/03 第 10.2 节 unitProfit",
+      "count": 4,
+      "task": 2
+    },
+    {
+      "id": "G05-4",
+      "source": "docs/05 第四节 六种商品两种发货方式",
+      "count": 12,
+      "task": 3
+    },
+    {
+      "id": "G04-14.1",
+      "source": "docs/04 第 14.1 节 推流分",
+      "count": 3,
+      "task": 3
+    },
+    {
+      "id": "G04-14.2",
+      "source": "docs/04 第 14.2 节 广告",
+      "count": 9,
+      "task": 3
+    },
+    {
+      "id": "G04-14.3",
+      "source": "docs/04 第 14.3 节 5 条价格系数加 1 条自然订单",
+      "count": 6,
+      "task": 3
+    },
+    {
+      "id": "G04-14.4",
+      "source": "docs/04 第 14.4 节 B1 到 B3 加 1 条 B2 的后续",
+      "count": 4,
+      "task": 3
+    },
+    {
+      "id": "G04-14.5",
+      "source": "docs/04 第 14.5 节 4 条进货价格加 1 条仓储费",
+      "count": 5,
+      "task": 3
+    },
+    {
+      "id": "G04-15",
+      "source": "docs/04 第十五节 加急补货",
+      "count": 2,
+      "task": 3
+    },
+    {
+      "id": "G06-10.1",
+      "source": "docs/06 第 10.1 节 参考数字",
+      "count": 1,
+      "task": 5
+    },
+    {
+      "id": "G06-10.2",
+      "source": "docs/06 第 10.2 节 现金计划",
+      "count": 3,
+      "task": 5
+    },
+    {
+      "id": "G06-10.3",
+      "source": "docs/06 第 10.3 节 季末结账的结论",
+      "count": 4,
+      "task": 5
+    }
   ]
 }
