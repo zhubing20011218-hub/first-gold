@@ -5,10 +5,10 @@ import { malaysia as P } from "../src/params/malaysia";
 import { getProduct, products } from "../src/products/catalog";
 import { computePushScore, emptyMonthStats } from "../src/engine/push";
 import { runAdAuction, adShareBp } from "../src/engine/ads";
-import { priceFactorBp, ratingFactorBp, marketOfDay } from "../src/engine/market";
+import { priceFactorBp, ratingFactorBp, marketOfDay, organicMilliSteps } from "../src/engine/market";
 import { applyBp } from "../src/engine/money";
 import { resolveBulkQuote } from "../src/engine/bulk";
-import { restockCostFen, storageFeeFen, rushOrder, affordableQty } from "../src/engine/stock";
+import { restockCostFen, storageFeeFen, rushOrder, affordableQty, headHaulFen } from "../src/engine/stock";
 import { buildSchedule } from "../src/engine/schedule";
 import { dayRng, roundMilli } from "../src/engine/dayRng";
 import { unitProfit } from "../src/engine/settle";
@@ -118,18 +118,7 @@ describe("价格系数和自然订单（docs/04 第 14.3 节）", () => {
   it("[G04-14.3#04] 头巾 2590 → 5477", () => expect(priceFactorBp(2590, hijab, P)).toBe(5477));
   it("[G04-14.3#05] 手机壳 1290 → 2000（算出来是 909，被下限挡住）", () => expect(priceFactorBp(1290, phoneCase, P)).toBe(2000));
   it("[G04-14.3#06] 自然订单的 m：4000、4000、4400、3736、3736", () => {
-    const steps: number[] = [];
-    let m = hijab.organicPerDayMilli;
-    steps.push(m);
-    m = applyBp(m, 10000);
-    steps.push(m);
-    m = applyBp(m, 11000);
-    steps.push(m);
-    m = applyBp(m, priceFactorBp(2190, hijab, P));
-    steps.push(m);
-    m = applyBp(m, ratingFactorBp(48, P));
-    steps.push(m);
-    expect(steps).toEqual([4000, 4000, 4400, 3736, 3736]);
+    expect(organicMilliSteps(hijab, 10000, 11000, 8492, 10000)).toEqual([4000, 4000, 4400, 3736, 3736]);
   });
 
   it("ratingFactorBp：评分每低 0.1 分少 8%，最低 3000", () => {
@@ -160,7 +149,7 @@ describe("大单报价（docs/04 第 14.4 节）", () => {
     const r = resolveBulkQuote(inquiry, 1020, 4, "cross", P);
     const valueFen = r.valueFen ?? 0;
     const depositFen = r.depositFen ?? 0;
-    expect(Math.ceil((inquiry.qty * hijab.weightG * P.headHaulFenPerKg.value) / 1000)).toBe(24000);
+    expect(headHaulFen(inquiry.qty, hijab, P)).toBe(24000);
     expect(valueFen - depositFen).toBe(353430);
     expect(depositFen).toBe(151470);
     expect(applyBp(valueFen, P.bulkPenaltyBp.value)).toBe(100980);

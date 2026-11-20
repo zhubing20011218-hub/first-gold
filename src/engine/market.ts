@@ -36,3 +36,16 @@ export function ratingFactorBp(ratingE1: number, params: Params): number {
     10000 - (params.initialRatingE1.value - ratingE1) * params.ratingStepBp.value,
   );
 }
+
+/** 自然订单的千分之一单，返回每一步乘完之后的值（docs/04 第 6.2 节） */
+export function organicMilliSteps(
+  product: Product,
+  demandBp: number,
+  pushBp: number,
+  priceFactor: number,
+  ratingFactor: number,
+): number[] {
+  const steps = [product.organicPerDayMilli];
+  for (const bp of [demandBp, pushBp, priceFactor, ratingFactor]) steps.push(applyBp(steps[steps.length - 1], bp));
+  return steps;
+}
