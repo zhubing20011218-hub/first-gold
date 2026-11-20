@@ -16,12 +16,20 @@ import {
   openShop,
   pickFulfillment,
   pickProduct,
-  runQuarter,
+  answerBulkShort,
+  confirmBill,
+  declareBankruptcy,
+  nextQuarter,
+  playQuarterThrough,
+  seeResult,
+  skipPlay,
+  tickPlay,
   setDecision,
   setFirstStock,
   startNewGame,
   startQuarterPlay,
 } from "../src/ui/store/actions";
+import { keyDecisionRun } from "../src/plan/keyDecision";
 import { canProceed, planOf, statusOf, timelineOf, worldViewOf } from "../src/ui/store/selectors";
 
 const hijab = getProduct("hijab");
@@ -123,47 +131,114 @@ describe("做决定", () => {
   });
 });
 
-describe("过一个季度", () => {
-  it("runQuarter：没定完会报错；定完算到第 90 天，每天的现金都记下来", () => {
-    expect(() => runQuarter(opened())).toThrow();
-    const run = runQuarter(decided(opened()));
-    expect(run.game.day).toBe(90);
-    expect(run.cashByDay.length).toBe(run.eventsByDay.length);
-    expect(run.cashByDay[run.cashByDay.length - 1]).toBe(run.game.cashFen);
-    expect(run.decision.bulkShortChoices).toEqual([]);
-  });
-  it("startQuarterPlay：直接进入下一个季度的做决定，三个功能区沿用上个季度", () => {
+describe("过一个季度：播放和结算（任务 07）", () => {
+  it("startQuarterPlay：没定完不动；定完开始播放，模型先算到停下的地方", () => {
+    const o = opened();
+    expect(startQuarterPlay(o)).toBe(o);
     const u = startQuarterPlay(decided(opened()));
+    expect(u.stage).toBe("play");
+    expect(u.playIndex).toBe(0);
+    expect(u.play?.days.length).toBeGreaterThan(80);
+    expect(u.game).toBe(decided(opened()).game === null ? null : u.play?.startState);
+  });
+  it("tickPlay：一天一天放，界面上的状态就是那一天的；放完自动结算，打开季度报表", () => {
+    let u = startQuarterPlay(decided(opened()));
+    u = tickPlay(u, 10);
+    expect(u.playIndex).toBe(10);
+    expect(u.game).toBe(u.play?.days[9].state);
+    u = skipPlay(u);
+    expect(u.stage).toBe("settle");
+    expect(u.popup).toBe("bill");
+    expect(u.report?.verified).toBe(true);
+    expect(u.report?.verdict).toBe("continue");
+    expect(u.game?.day).toBe(90);
+    // 结算时时间线和季节还停在刚放完的那个季度
+    expect(timelineOf(u).quarter).toBe(0);
+    expect(u.history).toHaveLength(1);
+    expect(verifyQuarter(u.history[0].startCashFen, u.bills[0], u.history[0].endCashFen)).toBe(true);
+  });
+  it("没确认报表时 nextQuarter 无效；确认之后进入下一个季度，三个功能区沿用上个季度", () => {
+    const s = skipPlay(startQuarterPlay(decided(opened())));
+    expect(nextQuarter(s)).toBe(s);
+    const c = confirmBill(s);
+    expect(c.billConfirmed).toBe(true);
+    expect(c.popup).toBeNull();
+    const u = nextQuarter(c);
     expect(u.stage).toBe("decide");
     expect(timelineOf(u).quarter).toBe(1);
-    expect(u.decisions).toHaveLength(1);
-    expect(u.history).toHaveLength(1);
     expect(u.carried).toEqual({ purchase: true, ops: true, finance: true });
-    expect(u.confirmed).toEqual({ purchase: true, ops: true, finance: true });
     expect(u.decision.monthlyRestockQty).toBe(200);
-    expect(u.decision.priceSen).toBe(hijab.refPriceSen);
-    // 大单和合规、升级不沿用
     expect(u.decision.bulkQuotes).toEqual([]);
     expect(u.decision.upgradeToLocal).toBe(false);
-    // 账单能对上：季初 + 收入 − 支出 = 季末
-    const h = u.history[0];
-    expect(verifyQuarter(h.startCashFen, u.bills[0], h.endCashFen)).toBe(true);
   });
-  it("能从首页一路点到第 8 个季度结束（两种发货方式，几个种子）", () => {
+  it("结论是 bankrupt 时只能 declareBankruptcy：确认报表、进入下一个季度都无效", () => {
+    // 补满供应商上限、广告开到最大，第一个季度季末付不起
+    let u = opened(5, "cross");
+    u = setDecision(u, "purchase", { monthlyRestockQty: hijab.supplierMonthlyCap });
+    u = setDecision(u, "ops", { priceSen: hijab.minPriceSen, adBidFen: 200, adDailyBudgetFen: 20000 });
+    u = setDecision(u, "finance", {});
+    const s = skipPlay(startQuarterPlay(u));
+    expect(s.report?.verdict).toBe("bankrupt");
+    expect(confirmBill(s)).toBe(s);
+    expect(nextQuarter(s)).toBe(s);
+    expect(seeResult(s)).toBe(s);
+    const e = declareBankruptcy(s);
+    expect(e.stage).toBe("ending");
+    expect(e.game?.phase).toBe("bankrupt");
+  });
+  it("播放遇到大单货不够会停下，打开 P9；回答之后接着往下放，选择记进这个季度的决定", () => {
+    const found = findPending();
+    expect(found).not.toBeNull();
+    if (!found) return;
+    let u = skipPlay(found);
+    expect(u.stage).toBe("play");
+    expect(u.popup).toBe("bulkShort");
+    expect(u.game?.pending).not.toBeNull();
+    const id = u.game?.pending?.inquiryId;
+    // 弹窗开着时播放不往前走
+    expect(tickPlay(u, 5)).toBe(u);
+    u = answerBulkShort(u, "rush");
+    expect(u.popup).toBeNull();
+    expect(u.play?.decision.bulkShortChoices).toContainEqual({ inquiryId: id, choice: "rush" });
+    for (let i = 0; i < 10 && u.stage === "play"; i++) u = u.popup === "bulkShort" ? answerBulkShort(u, "ignore") : skipPlay(u);
+    expect(u.stage).toBe("settle");
+    expect(u.report?.verified).toBe(true);
+  });
+  it("能从首页一路点到结局；把实际做过的决定（含季度中间的选择）重放一遍，结果完全一样", () => {
     for (const [seed, f] of [[3, "cross"], [8, "local"], [21, "cross"]] as const) {
-      let u = decided(opened(seed, f));
-      let guard = 0;
-      while (u.stage === "decide" && guard < 10) {
-        u = startQuarterPlay(u);
-        guard++;
-      }
+      let u = withQuotes(decided(opened(seed, f)));
+      for (let guard = 0; guard < 12 && u.stage === "decide"; guard++) u = playQuarterThrough(withQuotes(u), () => "rush");
       expect(u.stage).toBe("ending");
       expect(["finished", "bankrupt", "banned"]).toContain(u.game?.phase);
-      // 每一个季度都有账单，并且都对得上
       u.history.forEach((h, i) => expect(verifyQuarter(h.startCashFen, u.bills[i], h.endCashFen)).toBe(true));
+      const replayed = keyDecisionRun(u.game!.config, u.decisions, getProduct(u.game!.config.productId), P, null);
+      expect(replayed).toEqual(u.game);
     }
   });
 });
+
+/** 给这个季度的每张询价单报参考价的八成（比对手低，能中标，让大单出现） */
+function withQuotes(ui: UiState): UiState {
+  if (ui.stage !== "decide" || !ui.game) return ui;
+  const q = Math.floor(ui.game.day / 90);
+  const product = getProduct(ui.game.config.productId);
+  const quotes = ui.game.schedule.inquiries.filter((i) => i.quarter === q).map((i) => ({ inquiryId: i.id, unitPriceSen: Math.floor((product.bulkRefPriceSen * 8) / 10) }));
+  return quotes.length > 0 ? setDecision(ui, "ops", { ...ui.decision, bulkQuotes: quotes }) : ui;
+}
+
+/** 找一局：报了大单、补货很少，播放时会停在大单货不够 */
+function findPending(): UiState | null {
+  for (let seed = 1; seed < 80; seed++) {
+    let u = decided(opened(seed, "cross"));
+    for (let q = 0; q < 6 && u.stage === "decide"; q++) {
+      const quoted = setDecision(withQuotes(decided(u)), "purchase", { monthlyRestockQty: 0 });
+      const started = startQuarterPlay(quoted);
+      if (started.play?.stoppedAt === "pending") return started;
+      u = playQuarterThrough(withQuotes(u));
+    }
+  }
+  return null;
+}
 
 describe("取数", () => {
   it("timelineOf：季度、年、季节", () => {
@@ -177,12 +252,12 @@ describe("取数", () => {
     expect(statusOf(opened(11, "cross"))?.risk).toBeNull();
     expect(statusOf(opened(11, "local"))?.risk).toBe("low");
     expect(statusOf(opened())?.pushDelta).toBeNull();
-    expect(typeof statusOf(startQuarterPlay(decided(opened())))?.pushDelta).toBe("number");
+    expect(typeof statusOf(playQuarterThrough(decided(opened())))?.pushDelta).toBe("number");
   });
   it("worldViewOf：发货方式和季节跟着游戏的状态", () => {
     const u = opened(11, "local");
     expect(worldViewOf(u).fulfillment).toBe("local");
     expect(worldViewOf(u).season).toBe(0);
-    expect(worldViewOf(startQuarterPlay(decided(u))).season).toBe(1);
+    expect(worldViewOf(playQuarterThrough(decided(u))).season).toBe(1);
   });
 });

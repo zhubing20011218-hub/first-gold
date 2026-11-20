@@ -35,7 +35,7 @@ export function CashPlanBar({ plan, canProceed, blockedReason, label, onNext, pr
               {it.explain ? <Explain text={it.explain}>{it.label}</Explain> : it.label}
             </span>
             <span className="num text-em font-bold xl:text-title">
-              {it.sign}
+              {it.fen !== 0 && it.sign}
               <MoneyText kind="yuan" amount={it.fen} />
             </span>
           </div>

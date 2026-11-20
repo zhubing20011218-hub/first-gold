@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import * as A from "./actions";
 import { initialUi, type Area, type PopupName, type UiState } from "./state";
-import type { Fulfillment, QuarterDecision } from "../../engine/types";
+import type { Fulfillment, MidChoice, QuarterDecision } from "../../engine/types";
 
 /** 种子在点"开始经营"时生成。这是整个项目里唯一允许的非确定性来源，只能出现在 src/ui（docs/09 第二节） */
 function newSeed(): number {
@@ -23,6 +23,13 @@ export interface Store extends UiState {
   closePopup: () => void;
   openDesk: (area: Area) => void;
   startQuarterPlay: () => void;
+  tickPlay: (n?: number) => void;
+  skipPlay: () => void;
+  answerBulkShort: (choice: MidChoice) => void;
+  confirmBill: () => void;
+  declareBankruptcy: () => void;
+  seeResult: () => void;
+  nextQuarter: () => void;
   nextCoach: () => void;
   /** 只给 ?demo= 用：直接放进一个用模型算好的界面状态 */
   load: (ui: UiState) => void;
@@ -43,6 +50,13 @@ export const useStore = create<Store>((set, get) => {
     closePopup: () => run(A.closePopup),
     openDesk: (area) => run((ui) => A.openDesk(ui, area)),
     startQuarterPlay: () => run(A.startQuarterPlay),
+    tickPlay: (n) => run((ui) => A.tickPlay(ui, n)),
+    skipPlay: () => run(A.skipPlay),
+    answerBulkShort: (choice) => run((ui) => A.answerBulkShort(ui, choice)),
+    confirmBill: () => run(A.confirmBill),
+    declareBankruptcy: () => run(A.declareBankruptcy),
+    seeResult: () => run(A.seeResult),
+    nextQuarter: () => run(A.nextQuarter),
     nextCoach: () => run(A.nextCoach),
     load: (ui) => set(ui),
   };

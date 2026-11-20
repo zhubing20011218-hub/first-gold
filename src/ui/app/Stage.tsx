@@ -3,12 +3,19 @@ import { useCallback, useState } from "react";
 import { WorldCanvas } from "../../scene/WorldCanvas";
 import type { LabelAnchors } from "../../scene/world/World";
 import { useStore } from "../store/store";
-import { canvasLabelOf, inquiriesOf, productOf, statusOf, timelineOf, worldLabelsOf, worldViewOf } from "../store/selectors";
+import { canvasLabelOf, inquiriesOf, playProgressOf, productOf, statusOf, timelineOf, worldLabelsOf, worldViewOf } from "../store/selectors";
 import { Timeline, StatusBar, InquiryNote } from "../components/biz/TopBar";
 import { WorldLabels } from "../components/biz/WorldLabels";
 import { HomeLayer } from "../stages/HomeLayer";
 import { SetupLayer } from "../stages/SetupLayer";
 import { DecideLayer } from "../stages/DecideLayer";
+import { PlayLayer } from "../stages/PlayLayer";
+import { SettleLayer } from "../stages/SettleLayer";
+import { EndingLayer } from "../stages/EndingLayer";
+import { BillPopup } from "../popups/BillPopup";
+import { DeskPopup } from "../popups/DeskPopup";
+import { BulkShortPopup } from "../popups/BulkShortPopup";
+import { DebugPanel } from "../dev/DebugPanel";
 import { StockPopup } from "../popups/StockPopup";
 import { RetailPopup } from "../popups/RetailPopup";
 import { BulkPopup } from "../popups/BulkPopup";
@@ -38,8 +45,10 @@ export function Stage() {
   const t = timelineOf(ui);
   const product = productOf(ui);
   const label = canvasLabelOf(ui);
-  const inGame = ui.stage === "decide" || ui.stage === "play" || ui.stage === "settle";
+  const inGame = ui.stage === "decide" || ui.stage === "play" || ui.stage === "settle" || ui.stage === "ending";
   const canvasText = zh.world.canvas(zh.timeline.quarter[t.quarter % 4], String(label.stock), String(label.goods), formatYuan(label.moneyFen));
+  const progress = playProgressOf(ui);
+  const debug = typeof location !== "undefined" && new URLSearchParams(location.search).has("debug");
   const floorY = typeof window === "undefined" ? 492 : window.innerWidth < DESK ? Math.round(window.innerHeight / 3) : window.innerHeight - BOTTOM_UI;
 
   return (
@@ -56,18 +65,31 @@ export function Stage() {
             {ui.stage === "decide" && product && (
               <InquiryNote items={inquiriesOf(ui)} refPriceSen={product.bulkRefPriceSen} onOpen={() => ui.openPopup("bulk")} firstTime={t.quarter === 1} />
             )}
+            {/* 播放时右上的询价换成"第 37 天 / 90"（docs/07 第四节） */}
+            {ui.stage === "play" && progress && (
+              <div data-region="inquiry" className="rounded-full border-2 border-ink bg-paper px-4 py-2 text-em font-bold">
+                {zh.play.day(String(progress.day), String(progress.total))}
+              </div>
+            )}
           </div>
         </>
       )}
       {ui.stage === "home" && <HomeLayer />}
       {ui.stage === "setup" && <SetupLayer />}
       {ui.stage === "decide" && <DecideLayer />}
+      {ui.stage === "play" && <PlayLayer />}
+      {ui.stage === "settle" && <SettleLayer />}
+      {ui.stage === "ending" && <EndingLayer />}
       {ui.popup === "stock" && <StockPopup />}
       {ui.popup === "retail" && <RetailPopup />}
       {ui.popup === "bulk" && <BulkPopup />}
       {ui.popup === "risk" && <RiskPopup />}
       {ui.popup === "push" && <PushPopup />}
       {ui.popup === "source" && <SourcePopup />}
+      {ui.popup === "bill" && <BillPopup />}
+      {ui.popup === "desk" && <DeskPopup />}
+      {ui.popup === "bulkShort" && <BulkShortPopup />}
+      {debug && <DebugPanel />}
     </div>
   );
 }

@@ -4,13 +4,23 @@ import type { GameState, QuarterDecision } from "../../engine/types";
 import { malaysia } from "../../params/malaysia";
 import { getProduct } from "../../products/catalog";
 import { inTransitBatches, reservedQty } from "../../engine/game";
-import { riskLevel } from "../../engine/summary";
+import { netWorthFen, riskLevel } from "../../engine/summary";
 import { pricePoints, pushBpOf } from "../../engine/push";
 import { senToFen } from "../../engine/money";
 import { cashPlan, sureInFen, type CashPlan } from "../../plan/cashPlan";
 import { referenceNumbers, type ReferenceNumbers } from "../../plan/reference";
 import { allConfirmed } from "./actions";
 import type { Area, UiState } from "./state";
+import type { Bill } from "../../engine/bills";
+import { buildQuarterBills } from "../../engine/bills";
+import type { GameEvent } from "../../engine/events";
+import { applyBp } from "../../engine/money";
+import { projectedQtyFor } from "../../engine/pending";
+import { rushOrder } from "../../engine/stock";
+import type { Reminder as PlanReminder } from "../../plan/reminders";
+import { playReminders } from "../../plan/reminders";
+import { quarterStartCashFen } from "./actions";
+import type { QuarterReport } from "./state";
 
 const P = malaysia;
 export const params = P;
@@ -22,7 +32,8 @@ export function productOf(ui: UiState) {
 
 export function timelineOf(ui: UiState): { quarter: number; year: number; season: number } {
   const day = ui.game ? Math.min(ui.game.day, 719) : 0;
-  const quarter = Math.floor(day / 90);
+  // 播放和结算时停在正在放、刚放完的那个季度：换季节在点"进入下一个季度"之后（docs/10 第四节）
+  const quarter = ui.stage === "play" && ui.play ? ui.play.quarter : ui.stage === "settle" && ui.report ? ui.report.quarter : Math.floor(day / 90);
   return { quarter, year: Math.floor(quarter / 4), season: quarter % 4 };
 }
 
@@ -174,3 +185,197 @@ export { firstStockCost, maxFirstStock, setupCards } from "../../plan/setup";
 export type { Fulfillment, QuarterDecision } from "../../engine/types";
 export type { Reminder } from "../../plan/reminders";
 export type { CashPlan } from "../../plan/cashPlan";
+
+// ---------- 任务 07：播放、结算、季度报表、大单货不够、工作台、调试面板 ----------
+export type { Bill } from "../../engine/bills";
+export type { Cause } from "../../plan/causes";
+export type { QuarterReport } from "./state";
+
+/** 已经放出来的这些天的事件 */
+function shownDays(ui: UiState) {
+  return ui.play ? ui.play.days.slice(0, ui.playIndex) : [];
+}
+
+/** 播放到第几天（这个季度里的第几天，从 1 开始）和一共几天 */
+export function playProgressOf(ui: UiState): { day: number; total: number } | null {
+  const play = ui.play;
+  if (!play) return null;
+  const first = play.quarter * 90;
+  const shown = shownDays(ui);
+  const day = shown.length > 0 ? shown[shown.length - 1].day - first + 1 : 0;
+  // 第 8 个季度之后还有收尾阶段：天数按模型实际算到的天数
+  const total = Math.max(90, play.days.length > 0 ? play.days[play.days.length - 1].day - first + 1 : 90);
+  return { day: Math.max(0, day), total };
+}
+
+export interface PlayNumbers {
+  stock: number;
+  goods: number;
+  orders: number;
+  lost: number;
+  adsFen: number;
+  cashFen: number;
+  paidFen: number;
+}
+
+/** 播放时三个功能区收起成的一行数字（docs/07 第四节"播放时"） */
+export function playNumbersOf(ui: UiState): PlayNumbers | null {
+  const g = ui.game;
+  if (!g || !ui.play) return null;
+  let orders = 0;
+  let lost = 0;
+  let adsFen = 0;
+  let paidFen = 0;
+  for (const d of shownDays(ui)) {
+    for (const e of d.events) {
+      if (e.type === "orders_shipped") {
+        orders += e.organicOrders + e.adOrders;
+        lost += e.lost;
+      } else if (e.type === "ads_ran") adsFen += e.adSpendFen;
+      else if (e.type === "payout_received") paidFen += e.amountFen;
+    }
+  }
+  return { stock: g.stockQty, goods: goodsOnWay(g), orders, lost, adsFen, cashFen: g.cashFen, paidFen };
+}
+
+/** 播放时每个功能区上方的提醒：最近 15 天里最新的一条 */
+export function playRemindersOf(ui: UiState): PlanReminder[] {
+  const play = ui.play;
+  if (!play) return [];
+  const shown = shownDays(ui);
+  if (shown.length === 0) return [];
+  const all = playReminders(
+    shown.map((d) => ({ events: d.events, cashAfterFen: d.cashAfterFen })),
+    play.startState.cashFen,
+  );
+  const today = shown[shown.length - 1].day;
+  const out: PlanReminder[] = [];
+  for (const area of ["purchase", "ops", "finance"] as Area[]) {
+    const latest = all.filter((r) => r.area === area && today - r.day < 15).pop();
+    if (latest) out.push(latest);
+  }
+  return out;
+}
+
+/** 账单的编号显示成"Q4-进货-02"（docs/07 第 6.9 节） */
+export function billLabel(b: Bill, kindName: string): string {
+  const parts = b.id.split("-");
+  return parts.length >= 3 ? `${parts[0]}-${kindName}-${parts[parts.length - 1]}` : b.id;
+}
+
+export interface BillGroup {
+  area: Area;
+  rows: { kind: string; count: number; totalFen: number; items: Bill[] }[];
+}
+
+/** 季度报表的收入和支出：按功能区分三块，每块里按 kind 分行 */
+export function billGroupsOf(report: QuarterReport): BillGroup[] {
+  return (["purchase", "ops", "finance"] as Area[]).map((area) => {
+    const rows = new Map<string, Bill[]>();
+    for (const b of report.bills.filter((x) => x.role === area)) rows.set(b.kind, [...(rows.get(b.kind) ?? []), b]);
+    return { area, rows: [...rows.entries()].map(([kind, items]) => ({ kind, count: items.length, totalFen: items.reduce((s, b) => s + b.amountFen, 0), items })) };
+  });
+}
+
+export function billTotalsOf(report: QuarterReport): { incomeFen: number; expenseFen: number; count: number } {
+  let incomeFen = 0;
+  let expenseFen = 0;
+  for (const b of report.bills) {
+    if (b.amountFen >= 0) incomeFen += b.amountFen;
+    else expenseFen -= b.amountFen;
+  }
+  return { incomeFen, expenseFen, count: report.bills.length };
+}
+
+export function reportOf(ui: UiState): QuarterReport | null {
+  return ui.report;
+}
+
+/** 大单货不够时弹窗 P9 要显示的数（docs/07 第 6.8 节） */
+export function bulkShortOf(ui: UiState) {
+  const g = ui.game;
+  const pending = g?.pending;
+  if (!g || !pending) return null;
+  const bulk = g.bulkOrders.find((b) => b.inquiryId === pending.inquiryId);
+  if (!bulk) return null;
+  const product = getProduct(g.config.productId);
+  const rush = rushOrder(pending.shortQty, g.fulfillment, product, P);
+  return {
+    day: bulk.shipDay,
+    qty: bulk.qty,
+    short: pending.shortQty,
+    rush,
+    cashAfterFen: g.cashFen - rush.totalFen,
+    depositFen: bulk.depositFen,
+    penaltyFen: applyBp(bulk.valueFen, P.bulkPenaltyBp.value),
+  };
+}
+
+/** 这一局到现在为止的全部事件（包括正在播放的、已经放出来的） */
+function eventsSoFar(ui: UiState): GameEvent[] {
+  return [...ui.events, ...(ui.stage === "play" ? shownDays(ui).flatMap((d) => d.events) : [])];
+}
+
+/** 工作台 P8 的数据（docs/09 第四节），全部从状态、事件和账单里取 */
+export function deskOf(ui: UiState) {
+  const g = ui.game;
+  if (!g) return null;
+  const product = getProduct(g.config.productId);
+  const q = Math.floor(Math.min(g.day, 719) / 90);
+  const events = eventsSoFar(ui);
+  const inQ = events.filter((e) => Math.floor(e.day / 90) === q || (q === 7 && e.day >= 720));
+  const ref = referenceNumbers(g, product, P);
+  const restockOrders = events.filter((e): e is Extract<GameEvent, { type: "restock_ordered" }> => e.type === "restock_ordered").slice(-8);
+  const sum = (type: GameEvent["type"], f: (e: GameEvent) => number) => inQ.filter((e) => e.type === type).reduce((s, e) => s + f(e), 0);
+  const adRuns = inQ.filter((e): e is Extract<GameEvent, { type: "ads_ran" }> => e.type === "ads_ran");
+  const adSpend = adRuns.reduce((s, e) => s + e.adSpendFen, 0);
+  const adOrders = adRuns.reduce((s, e) => s + e.adOrders, 0);
+  const quotes = events.filter((e): e is Extract<GameEvent, { type: "bulk_won" | "bulk_lost" }> => e.type === "bulk_won" || e.type === "bulk_lost");
+  const bills = buildQuarterBills(q, events, P);
+  return {
+    restocks: restockOrders.map((e) => ({ id: e.id, day: e.day, qty: e.qty, unitCostFen: e.unitCostFen, arriveDay: e.arriveDay, arrived: e.arriveDay < g.day })),
+    stock: { stock: g.stockQty, reserved: reservedQty(g), days: ref.stockDays },
+    bulkPrep: g.bulkOrders
+      .filter((b) => b.status === "won")
+      .map((b) => ({ qty: b.qty, shipDay: b.shipDay, short: Math.max(0, b.qty - projectedQtyFor(g, b, product, P)) })),
+    retail: {
+      wanted: sum("orders_shipped", (e) => (e.type === "orders_shipped" ? e.organicOrders + e.adOrders : 0)),
+      shipped: sum("orders_shipped", (e) => (e.type === "orders_shipped" ? e.shipped : 0)),
+      lost: sum("orders_shipped", (e) => (e.type === "orders_shipped" ? e.lost : 0)),
+      delivered: sum("orders_delivered", (e) => (e.type === "orders_delivered" ? e.delivered : 0)),
+      returned: sum("orders_delivered", (e) => (e.type === "orders_delivered" ? e.returned : 0)),
+    },
+    orders: g.orderBatches.filter((b) => b.returnedQty === null).slice(-8).map((b) => ({ day: b.orderDay, qty: b.qty, deliverDay: b.deliverDay })),
+    ads: { bidFen: g.adBidFen, budgetFen: g.adDailyBudgetFen, spendFen: adSpend, clicks: adRuns.reduce((s, e) => s + e.clicks, 0), orders: adOrders, eachFen: adOrders > 0 ? Math.round(adSpend / adOrders) : 0 },
+    quotes: quotes.slice(-6).map((e) => ({ id: e.inquiryId, won: e.type === "bulk_won", priceSen: e.unitPriceSen, rivalSen: e.type === "bulk_lost" ? e.rivalBestSen : null, qty: g.schedule.inquiries.find((i) => i.id === e.inquiryId)?.qty ?? 0 })),
+    bills: bills.slice(-10),
+    oldBills: ui.history.map((h) => h.quarter),
+    payouts: g.orderBatches.filter((b) => !b.paid).slice(-8).map((b) => ({ amountFen: (b.qty - (b.returnedQty ?? 0)) * b.payoutFenEach, day: b.settleDay === null ? null : Math.max(b.settleDay, g.payoutFrozenUntilDay), signed: b.returnedQty !== null })),
+    bulkMoney: g.bulkOrders.slice(-6).map((b) => ({ depositFen: b.depositFen, balanceFen: b.valueFen - b.depositFen, day: b.balanceDay ?? b.dueDay, status: b.status })),
+    risk: g.fulfillment === "local" ? { level: riskLevel(g.riskPts, P), compliance: g.totals.complianceFen > 0 ? Math.round(g.totals.complianceFen / P.complianceCostFen.value) : 0, audits: g.auditCount } : null,
+    reminders: [...ui.reminderLog, ...playRemindersOf(ui)].slice(-12),
+    day: g.day,
+  };
+}
+
+/** ?debug=1 的现金等式：这个季度的季初现金 + 到现在的账单 = 现在的现金 */
+export function debugCashOf(ui: UiState): { ok: boolean; startFen: number; sumFen: number; cashFen: number } | null {
+  const g = ui.game;
+  if (!g) return null;
+  const q = ui.play ? ui.play.quarter : Math.floor(Math.min(g.day, 719) / 90);
+  const startState = ui.play ? ui.play.startState : ui.stage === "decide" ? g : ui.history[ui.history.length - 1]?.startState ?? g;
+  const startFen = ui.stage === "decide" ? g.cashFen : quarterStartCashFen(startState);
+  const bills = ui.stage === "decide" ? [] : buildQuarterBills(q, eventsSoFar(ui), P);
+  const sumFen = bills.reduce((s, b) => s + b.amountFen, 0);
+  return { ok: startFen + sumFen === g.cashFen, startFen, sumFen, cashFen: g.cashFen };
+}
+
+/** 结局（任务 08 会做完整的）：怎么结束的、净资产、目标 */
+export function endingOf(ui: UiState): { kind: "goal" | "survived" | "bankrupt" | "banned"; netWorthFen: number; goalFen: number } | null {
+  const g = ui.game;
+  if (!g || ui.stage !== "ending") return null;
+  const nw = netWorthFen(g, getProduct(g.config.productId), P);
+  const goalFen = P.goalNetWorthFen.value;
+  const kind = g.phase === "bankrupt" ? "bankrupt" : g.phase === "banned" ? "banned" : nw >= goalFen ? "goal" : "survived";
+  return { kind, netWorthFen: nw, goalFen };
+}

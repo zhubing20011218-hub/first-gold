@@ -342,6 +342,142 @@ export const zh = {
     mismatch: "对不上",
   },
 
+  /** 播放（docs/07 第四节"播放时"） */
+  play: {
+    day: (day: string, total: string): string => `第 ${day} 天 / ${total}`,
+    skip: "跳过",
+    playing: "播放中",
+    stock: "库存",
+    goods: "路上的货",
+    orders: "订单",
+    lost: "缺货",
+    ads: "广告花费",
+    cash: "现金",
+    paid: "到账",
+  },
+
+  /** 结算（docs/07 第四节"结算时"） */
+  settle: {
+    planOut: (plan: string, actual: string): string => `预计花掉 ${plan}，实际 ${actual}`,
+    ads: (max: string, actual: string): string => `广告最多 ${max}，实际 ${actual}`,
+    worst: (worst: string, end: string): string => `最坏的季末 ${worst}，实际 ${end}`,
+    planVsActual: "计划和实际",
+    openBill: "看季度报表",
+  },
+
+  /** 季度报表 P6（docs/07 第 6.9 节） */
+  bill: {
+    title: (year: string, quarter: string): string => `${year}${quarter}的报表`,
+    firstTime: "每个季度结束，都要看这张报表。你确认之后才能往下走。",
+    kinds: {
+      restock: "进货",
+      rush: "加急补货",
+      bulk_freight: "大单运费",
+      ads: "广告费",
+      order_fee: "每单的货代费",
+      order_fee_local: "贴单费",
+      payout: "平台回款",
+      bulk_deposit: "大单定金",
+      bulk_balance: "大单尾款",
+      bulk_penalty: "大单违约",
+      fixed: "每月固定开支",
+      storage: "仓储费",
+      compliance: "合规",
+      setup: "本土店开通",
+    } as Record<string, string>,
+    count: (n: string): string => `${n} 笔`,
+    rowDay: (day: string): string => `第 ${day} 天`,
+    verify: (start: string, income: string, expense: string, end: string, count: string): string =>
+      `季度初 ${start} + 收入 ${income} − 支出 ${expense} = 季度末 ${end}。共 ${count} 笔，已核对。`,
+    mismatch: "这个季度的账对不上。",
+    planVsActual: (plan: string, actual: string, adsMax: string, ads: string, worst: string, end: string): string =>
+      `预计花掉 ${plan}，实际 ${actual}；广告最多 ${adsMax}，实际 ${ads}；最坏的季末 ${worst}，实际 ${end}。`,
+    sections: { money: "收入和支出", check: "核对", plan: "计划和实际", carry: "带到下个季度的", result: "这个季度的结果", why: "为什么", verdict: "结论" } as Record<string, string>,
+    carry: { stock: "库存", goods: "路上的货", money: "路上的货款", bulk: "没交完的大单" } as Record<string, string>,
+    result: (shipped: string, lost: string, won: string, delivered: string, push: string, delta: string): string =>
+      `零售发出 ${shipped} 单，缺货 ${lost} 单；大单中了 ${won} 张，交了 ${delivered} 张；推流分 ${push}（${delta}）。`,
+    continue: (end: string): string => `季末现金 ${end}，付得起。确认之后进入下一个季度。`,
+    bankrupt: (end: string): string => `季末现金 ${end}，付不起。只能申请破产。`,
+    banned: "店被平台封了。",
+    finished: "两年的经营结束了。",
+    confirm: "确认报表",
+    declare: "申请破产",
+    see: "看结果",
+  },
+
+  /** 为什么（docs/06 第六节） */
+  causes: {
+    cause_cash_negative: (d: D): string => `季末现金是 ${d.cash}，付不起。`,
+    cause_bulk_default: (d: D): string => `大单交不出货，赔了 ${d.penalty}。`,
+    cause_audit: (d: D): string => `风险到了“高”，平台冻结货款 ${d.days} 天。`,
+    cause_rush: (d: D): string => `加急补了 ${d.qty} 件，比平时多花 ${d.extra}。`,
+    cause_stockout: (d: D): string => `缺货 ${d.lost} 单，“近期发货水平”掉了 ${d.pts} 分，下个月平台给的流量会变少。`,
+    cause_bulk_reserved: (d: D): string => `有 ${d.qty} 件货留给了大单，零售不够卖。`,
+    cause_ads_unspent: (d: D): string => `广告预算只花掉 ${d.pct}。出价比对手低，抢不到更多流量。`,
+    cause_ads_loss: (d: D): string => `广告每带来一单要花 ${d.cost}，这一单只赚 ${d.profit}。`,
+    cause_price_low: (d: D): string => `降价让“价格”多了 ${d.pts} 分，但每单少赚 ${d.diff}。`,
+    cause_price_high: (d: D): string => `涨价让每单多赚 ${d.diff}，但“价格”少了 ${d.pts} 分，买的人也少了。`,
+    cause_storage: (d: D): string => `仓库里压着 ${d.qty} 件卖不动的货，仓储费 ${d.fee}。`,
+    cause_cash_wait: (d: D): string => `账上有 ${d.cash}，还有 ${d.pending} 在路上没到。`,
+    cause_push_up: (d: D): string => `推流分涨到 ${d.score}，不花广告费的订单会变多。`,
+  } as Record<string, (d: D) => string>,
+
+  /** 大单货不够 P9（docs/07 第 6.8 节） */
+  bulkShort: {
+    title: "大单快要发货了，货不够",
+    desc: (day: string, qty: string, short: string): string => `第 ${day} 天要发 ${qty} 件，到时候还差 ${short} 件。怎么办由你决定。`,
+    rush: (n: string): string => `加急补 ${n} 件`,
+    rushNote: (price: string, cost: string, days: string): string => `每件 ${price}，一共 ${cost}，${days} 天到。`,
+    rushCash: (after: string): string => `现金会变成 ${after}，季末付不起只能申请破产。`,
+    ignore: "不处理",
+    ignoreNote: (deposit: string, penalty: string): string => `到时候交不出：退定金 ${deposit}，赔 ${penalty}。`,
+  },
+
+  /** 工作台 P8（docs/09 第四节） */
+  desk: {
+    title: "工作台",
+    desc: "只能看，不能改。要改，回到功能区点“改”。",
+    sections: {
+      restocks: "补货单",
+      stock: "库存",
+      bulkPrep: "大单备货",
+      retail: "零售",
+      orders: "路上的订单",
+      ads: "广告",
+      quotes: "大单报价",
+      bills: "账单",
+      payouts: "回款",
+      bulkMoney: "大单的钱",
+      risk: "风险",
+      reminders: "提醒",
+    } as Record<string, string>,
+    empty: "还没有",
+    restockRow: (id: string, day: string, qty: string, each: string, arrive: string): string => `${id} · 第 ${day} 天下单 · ${qty} 件 · 每件 ${each} · 第 ${arrive} 天到`,
+    stockRow: (stock: string, reserved: string, days: string): string => `现在 ${stock} 件，留给大单 ${reserved} 件，够卖 ${days} 天`,
+    bulkPrepRow: (qty: string, day: string, short: string): string => `${qty} 件 · 第 ${day} 天发货 · 还差 ${short} 件`,
+    retailRow: (wanted: string, shipped: string, lost: string, delivered: string, returned: string): string =>
+      `来了 ${wanted} 单，发出 ${shipped}，缺货 ${lost}，签收 ${delivered}，退货 ${returned}`,
+    orderRow: (day: string, qty: string, sign: string): string => `第 ${day} 天发出 ${qty} 单 · 预计第 ${sign} 天签收`,
+    adsRow: (bid: string, budget: string, spend: string, clicks: string, orders: string, each: string): string =>
+      `出价 ${bid} · 每天 ${budget} · 花了 ${spend} · 点击 ${clicks} · 订单 ${orders} · 每单 ${each}`,
+    quoteRow: (qty: string, price: string, rival: string): string => `${qty} 件 · 报 ${price} · 对手 ${rival}`,
+    noQuote: "没报",
+    billRow: (id: string, day: string, amount: string): string => `${id} · 第 ${day} 天 · ${amount}`,
+    payoutRow: (amount: string, day: string): string => `${amount} · 预计第 ${day} 天到账`,
+    bulkMoneyRow: (deposit: string, balance: string, day: string): string => `定金 ${deposit} · 尾款 ${balance} · 第 ${day} 天`,
+    riskRow: (level: string, compliance: string, audits: string): string => `等级 ${level} · 做过 ${compliance} 次合规 · 被审核 ${audits} 次`,
+    riskCross: "跨境直发没有平台风险",
+    oldBills: "以前季度的报表",
+    quarterBill: (q: string): string => `第 ${q} 个季度`,
+  },
+
+  /** 结局（docs/07 第四节"结局"，任务 08 做完整的） */
+  ending: {
+    netWorth: "净资产",
+    again: "再来一局",
+    retry: "同一局再试一次",
+  },
+
   debug: {
     cash: "现金等式",
     ok: "对得上",

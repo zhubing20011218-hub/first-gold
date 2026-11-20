@@ -67,7 +67,7 @@ export function AreaPanel({ area, state, rows, reference, actions, onOpenDesk, r
           <div key={i} className="flex min-w-0 items-center justify-between gap-2">
             <div className="flex min-w-0 items-baseline gap-2">
               <span className="shrink-0 text-cap text-muted">{a.label}</span>
-              <span className={a.note ? "text-body whitespace-nowrap text-muted" : "num text-em font-bold whitespace-nowrap xl:text-title"}>{a.note ?? a.value}</span>
+              <span className={a.note ? "text-body text-muted" : "num text-em font-bold whitespace-nowrap xl:text-title"}>{a.note ?? a.value}</span>
             </div>
             {a.onChange && !a.note && (
               <button

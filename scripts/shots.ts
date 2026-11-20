@@ -21,7 +21,7 @@ const SIZES: [number, number][] = [
  *  任务 06 第二步：展示页（含世界和每一样模型）和四个季节；第三步再加各个页面。 */
 export const PAGES: { name: string; query: string; scrolls?: boolean; world?: boolean }[] = [
   { name: "gallery", query: "?gallery=1", scrolls: true, world: true },
-  ...["home", "setup", "decide", "popup-stock", "popup-retail", "popup-bulk", "popup-risk", "popup-push", "popup-source", "season-0", "season-1", "season-2", "season-3"].map(
+  ...["home", "setup", "decide", "popup-stock", "popup-retail", "popup-bulk", "popup-risk", "popup-push", "popup-source", "play", "settle", "settle-bankrupt", "popup-bill", "popup-desk", "popup-bulkshort", "season-0", "season-1", "season-2", "season-3"].map(
     (n) => ({ name: n, query: `?demo=${n}`, world: true }),
   ),
 ];
@@ -128,6 +128,13 @@ async function main(): Promise<void> {
           }
         }
         await page.screenshot({ path: join(OUT, `${p.name}-${w}x${h}.png`) });
+        // S9：能关的弹窗按 Esc 能关上（P9 大单货不够、付不起时的报表不能关，不查）
+        if (p.name.startsWith("popup-") && p.name !== "popup-bulkshort") {
+          await page.keyboard.press("Escape");
+          await page.waitForTimeout(300);
+          const left = await page.evaluate(() => document.querySelectorAll("[data-popup]").length);
+          if (left > 0) failures.push("S9：按 Esc 关不上弹窗");
+        }
         all.push({ page: p.name, size: `${w}x${h}`, failures });
         await page.close();
       }

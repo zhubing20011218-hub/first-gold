@@ -8,6 +8,7 @@ import { CashPlanBar } from "../components/biz/CashPlanBar";
 import { MoneyText } from "../components/base/MoneyText";
 import { Explain } from "../components/base/Explain";
 import { ReminderChip } from "../components/biz/ReminderChip";
+import { CoachMark } from "../components/base/CoachMark";
 import { zh } from "../../text/zh";
 import type { Area } from "../store/state";
 
@@ -35,6 +36,7 @@ export function DecideLayer() {
   const local = ui.game.fulfillment === "local";
   const riskValue = local ? (d.buyCompliance ? a.riskValue.compliance : a.riskValue.none) : d.upgradeToLocal ? a.riskValue.upgrade : a.riskValue.noUpgrade;
   const blocked = canProceed(ui) ? null : zh.plan.blocked;
+  const coach = q === 0 && !ui.popup ? ui.coachStep : 0;
 
   return (
     <div className="absolute inset-x-6 bottom-4 z-10 mx-auto flex max-w-content flex-col gap-4 max-md:inset-x-4">
@@ -45,6 +47,11 @@ export function DecideLayer() {
           </button>
         ))}
       </div>
+      {/* 新手提示（docs/07 第 6.6 节）：只在第一个季度出现，第 1 条指向世界，第 2 条指向三个功能区，第 3 条指向底部的现金计划 */}
+      <CoachMark open={coach === 1} text={zh.coach.tips[0]} step={1} total={3} onNext={() => ui.nextCoach()} side="top">
+        <span className="pointer-events-none absolute -top-12 left-1/2 h-px w-px" aria-hidden />
+      </CoachMark>
+      <CoachMark open={coach === 2} text={zh.coach.tips[1]} step={2} total={3} onNext={() => ui.nextCoach()} side="top">
       <div data-region="areas" className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
         <div className={clsx(tab !== "purchase" && "max-md:hidden")}>
           <AreaPanel
@@ -116,6 +123,9 @@ export function DecideLayer() {
           />
         </div>
       </div>
+      </CoachMark>
+      <CoachMark open={coach === 3} text={zh.coach.tips[2]} step={3} total={3} onNext={() => ui.nextCoach()} side="top">
+      <div>
       <CashPlanBar
         plan={plan}
         canProceed={canProceed(ui)}
@@ -124,6 +134,8 @@ export function DecideLayer() {
         primary
         onNext={() => ui.startQuarterPlay()}
       />
+      </div>
+      </CoachMark>
     </div>
   );
 }
