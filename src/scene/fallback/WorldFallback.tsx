@@ -11,7 +11,8 @@ export function WorldFallback({ label }: { label: string }) {
   ];
   return (
     <div className="absolute inset-0 z-0 flex items-start justify-center" role="img" aria-label={label} data-world-fallback>
-      <div className="relative aspect-fallback max-h-world-top w-full">
+      {/* 外层按图的比例：宽最多 1362（高 492），名字的百分比位置就和图上的地点对得上 */}
+      <div className="relative aspect-fallback w-full max-w-fallback" data-fallback-map>
         <svg viewBox="0 0 1440 520" preserveAspectRatio="xMidYMid meet" className="block h-full w-full" aria-hidden>
           <rect width="1440" height="520" fill={world.season[0].sky} />
           <polygon points="180,300 760,40 1260,260 680,520" fill={world.seaWater} />
@@ -34,6 +35,8 @@ export function WorldFallback({ label }: { label: string }) {
             key={text}
             className="absolute -translate-x-1/2 -translate-y-full rounded-full bg-paper px-2 text-cap font-bold whitespace-nowrap"
             style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+            data-fx={x}
+            data-fy={y}
           >
             {text}
           </span>

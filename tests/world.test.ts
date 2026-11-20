@@ -1,6 +1,8 @@
 // 世界（docs/10 第二到五节）：镜头和光、四个季节的布置、跟着发货方式和库存变的东西、东西不放进房子里。
 // 测试里没有 WebGL：给 World 一个什么都不画的渲染器，只检查世界里摆了什么。
 import { describe, expect, it } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as THREE from "three";
 import { World, type WorldView } from "../src/scene/world/World";
 import { world as W } from "../src/ui/theme/tokens";
@@ -163,7 +165,7 @@ describe("世界跟着数据变（docs/10 第五节，展示页能切换的几�
 });
 
 describe("东西不放进房子里，树不种在路上", () => {
-  it("遮阳伞、礼盒、买家、棕榈树、树都不在房子和仓库里；棕榈树、遮阳伞不在路上", () => {
+  it("遮阳伞、礼盒、买家、棕榈树都不在房子和仓库里；棕榈树、遮阳伞不在路上", () => {
     const w = make();
     w.setView(view({ year: 1 }));
     const blocks = [...named(w, "house"), ...named(w, "warehouse")].map(footprint);
@@ -193,5 +195,88 @@ describe("东西不放进房子里，树不种在路上", () => {
       if (roads.some((r) => overlaps(footprint(o), r))) bad.push(`${name} 在路上`);
     }
     expect(bad).toEqual([]);
+  });
+});
+
+// ---------- 和文档直接比（第 2 次检查之后加的） ----------
+
+const docsDir = join(__dirname, "..", "docs");
+const doc10 = readFileSync(join(docsDir, readdirSync(docsDir).find((f) => f.startsWith("10-")) ?? ""), "utf8");
+/** docs/10 第四节表格里某一行的四个格子，每格里的颜色 */
+function seasonRow(label: string): string[][] {
+  const section4 = doc10.split("## 四、四个季节")[1].split("## 五")[0];
+  const line = section4.split("\n").find((l) => l.startsWith(`| ${label} |`));
+  if (!line) throw new Error(label);
+  return line
+    .split("|")
+    .slice(2, 6)
+    .map((cell) => (cell.match(/#[0-9A-Fa-f]{6}/g) ?? []).map((h) => h.toLowerCase()));
+}
+
+describe("四个季节的颜色和 docs/10 第四节一样", () => {
+  it("中国的草地、树、天空、太阳光（颜色和强度）", () => {
+    const grass = seasonRow("中国的草地");
+    const tree = seasonRow("中国的树");
+    const sky = seasonRow("天空");
+    const sun = seasonRow("太阳光");
+    const sunLine = doc10.split("## 四、四个季节")[1].split("\n").find((l) => l.startsWith("| 太阳光 |")) ?? "";
+    const strength = [...sunLine.matchAll(/强度 ([\d.]+)/g)].map((m) => Number(m[1]));
+    for (const q of [0, 1, 2, 3] as const) {
+      const s = W.season[q];
+      expect(s.grass.toLowerCase(), `草地 ${q}`).toBe(grass[q][0]);
+      expect(s.sky.toLowerCase(), `天空 ${q}`).toBe(sky[q][0]);
+      expect(s.sun.toLowerCase(), `太阳 ${q}`).toBe(sun[q][0]);
+      expect(s.sunIntensity, `强度 ${q}`).toBe(strength[q]);
+      expect([s.tree[0].toLowerCase(), s.tree[1].toLowerCase()], `树 ${q}`).toEqual(tree[q]);
+    }
+  });
+});
+
+describe("模型的细节和位置", () => {
+  it("货船：橙色的烟囱（docs/10 第三节）", () => {
+    const w = make();
+    const colors = new Set<string>();
+    named(w, "ship")[0].traverse((o) => {
+      if (o instanceof THREE.Mesh) colors.add((o.material as THREE.MeshStandardMaterial).color.getHexString());
+    });
+    expect(colors.has(W.chimney.slice(1).toLowerCase())).toBe(true);
+  });
+  it("货的去路：码头那段不被船压住；仓库那段从仓库门口出发、不被货箱挡住、通到房子", () => {
+    const w = make();
+    w.setView(view({ fulfillment: "local", crates: 6 }));
+    const [sea, land] = named(w, "goods-path");
+    const ship = footprint(named(w, "ship")[0]);
+    for (const dash of sea.children) expect(overlaps(footprint(dash), ship)).toBe(false);
+    const wh = footprint(named(w, "warehouse")[0]);
+    const first = footprint(land.children[0]);
+    expect(first.z0).toBeGreaterThanOrEqual(wh.z1 - 0.01);
+    expect(first.z0 - wh.z1).toBeLessThan(0.5);
+    const crates = (inside(w).warehouseCrates as THREE.Mesh[]).filter((c) => c.visible).map(footprint);
+    for (const dash of land.children) expect(crates.some((c) => overlaps(footprint(dash), c))).toBe(false);
+    const houses = named(w, "house").map(footprint);
+    const last = footprint(land.children[land.children.length - 1]);
+    expect(houses.some((h) => Math.abs(last.x1 - h.x0) < 1.2 || (last.x1 > h.x0 && last.x0 < h.x1))).toBe(true);
+  });
+  it("中国的树不种在工厂、办公室、堆场里", () => {
+    const w = make();
+    const blocks = ["factory", "office", "yard"].flatMap((n) => named(w, n)).map(footprint);
+    // 按树冠算（比树枝大）
+    const trees = (inside(w).trees as { leaves: THREE.Mesh[]; bare: THREE.Group }[]).map((t) => {
+      const g = new THREE.Group();
+      for (const l of t.leaves) g.add(l.clone());
+      return footprint(g);
+    });
+    expect(trees.filter((t) => blocks.some((b) => overlaps(t, b))).length).toBe(0);
+  });
+  it("倒闭、封店时门、金币、仓库也变灰", () => {
+    const w = make();
+    w.setView(view({ gray: "none" }));
+    const wall = (inside(w).warehouseWall as THREE.MeshStandardMaterial).color.getHex();
+    const coin = (inside(w).coinMat as THREE.MeshStandardMaterial).color.getHex();
+    for (const g of ["my", "all"] as const) {
+      w.setView(view({ gray: g }));
+      expect((inside(w).warehouseWall as THREE.MeshStandardMaterial).color.getHex()).not.toBe(wall);
+      expect((inside(w).coinMat as THREE.MeshStandardMaterial).color.getHex()).not.toBe(coin);
+    }
   });
 });

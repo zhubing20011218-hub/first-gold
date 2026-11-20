@@ -71,8 +71,12 @@ export function s3(): CheckResult {
   const small = (st: CSSStyleDeclaration): boolean => parseFloat(st.fontSize) < 12;
   const bad: Element[] = textElements().filter((el) => small(getComputedStyle(el)));
   for (const el of Array.from(document.querySelectorAll("input, textarea, select")).filter(visible)) if (small(getComputedStyle(el))) bad.push(el);
-  // SVG 里的字会跟着图缩放：按画出来的高度算（12 像素的字，字框大约 12 像素高）
-  for (const el of Array.from(document.querySelectorAll("svg text")).filter(visible)) if (el.getBoundingClientRect().height < 12) bad.push(el);
+  // SVG 里的字会跟着图缩放：字号乘以 SVG 的缩放比例，不小于 12（docs/11 S3）
+  for (const el of Array.from(document.querySelectorAll("svg text")).filter(visible)) {
+    const ctm = (el as SVGGraphicsElement).getScreenCTM();
+    const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+    if (parseFloat(getComputedStyle(el).fontSize) * scale < 12 - 0.01) bad.push(el);
+  }
   for (const el of Array.from(document.body.querySelectorAll("*")).filter(visible)) {
     for (const pseudo of ["::before", "::after"]) {
       const st = getComputedStyle(el, pseudo);

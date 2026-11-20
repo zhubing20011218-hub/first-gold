@@ -109,6 +109,7 @@ async function main(): Promise<void> {
         await page.waitForTimeout(2000);
         const failures = await checkPage(page, Boolean(p.scrolls), w, h, Boolean(p.world));
         if (!worldOk) failures.push("S10：15 秒内世界没有画好");
+        if (p.world && (await page.evaluate(() => document.querySelectorAll("[data-world-fallback]").length)) > 0) failures.push("S10：能用 WebGL，却显示了替代图");
         if (errors.length > 0) failures.push(`S5：控制台报错 ${errors.slice(0, 3).join("；")}`);
         if (late.length > 0) failures.push(`S6：加载之后还有网络请求 ${late.slice(0, 3).join("；")}`);
         // 可以滚动的页面（展示页）是在里面的一层滚动，整页截图截不到下面：先检查，再把窗口拉到内容的全高截图
@@ -131,7 +132,7 @@ async function main(): Promise<void> {
     // S10 的后一半：关掉 WebGL 再打开有世界的页面，要看到静态的替代图，页面不报错
     if (!process.env.SHOTS_SIZE) {
       const no3d = await chromium.launch({ args: ["--disable-webgl", "--disable-webgl2", "--disable-3d-apis"] });
-      for (const [nw, nh] of [[1440, 800], [390, 844], [360, 780]] as const) {
+      for (const [nw, nh] of [[1440, 800], [1920, 1080], [390, 844], [360, 780]] as const) {
         const context = await no3d.newContext({ viewport: { width: nw, height: nh }, deviceScaleFactor: 1, reducedMotion: "reduce" });
         for (const p of pages.filter((x) => x.world)) {
           const page = await context.newPage();
@@ -146,6 +147,29 @@ async function main(): Promise<void> {
           const failures = await checkPage(page, Boolean(p.scrolls), nw, nh);
           const fallback = await page.evaluate(() => document.querySelectorAll("[data-world-fallback]").length);
           if (fallback === 0) failures.push("S10：关掉 WebGL 之后没有显示替代图");
+        // 地点的名字要对准图上的地点：名字的下边中点和图上的位置相差不超过 2 像素
+        const off = await page.evaluate(() => {
+          const out: string[] = [];
+          for (const map of Array.from(document.querySelectorAll("[data-fallback-map]"))) {
+            const svg = map.querySelector("svg");
+            if (!svg) continue;
+            const r = svg.getBoundingClientRect();
+            // viewBox 1440 × 520，xMidYMid meet：图按比例放进去并居中
+            const s = Math.min(r.width / 1440, r.height / 520);
+            const ox = r.left + (r.width - 1440 * s) / 2;
+            const oy = r.top + (r.height - 520 * s) / 2;
+            for (const el of Array.from(map.querySelectorAll<HTMLElement>("[data-fx]"))) {
+              const b = el.getBoundingClientRect();
+              const ex = ox + Number(el.dataset.fx) * 1440 * s;
+              const ey = oy + Number(el.dataset.fy) * 520 * s;
+              const dx = (b.left + b.right) / 2 - ex;
+              const dy = b.bottom - ey;
+              if (Math.abs(dx) > 2 || Math.abs(dy) > 2) out.push(`${el.textContent ?? ""} 偏了 ${Math.round(dx)}, ${Math.round(dy)}`);
+            }
+          }
+          return out;
+        });
+        if (off.length > 0) failures.push(`S10：替代图上的名字没对准地点 ${off.join("；")}`);
           if (errors.length > 0) failures.push(`S5：控制台报错 ${errors.slice(0, 3).join("；")}`);
           await page.screenshot({ path: join(OUT, `${p.name}-no3d-${nw}x${nh}.png`) });
           all.push({ page: `${p.name}（关掉 3D）`, size: `${nw}x${nh}`, failures });

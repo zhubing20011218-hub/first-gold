@@ -83,8 +83,8 @@ const GOODS_PATHS: [number, number, number][][] = [
     [13.9, 0.05, 5.95],
   ],
   [
-    [18.4, 0.56, 3.95],
-    [18.4, 0.56, 4.35],
+    [19.6, 0.56, 3.95],
+    [19.6, 0.56, 4.35],
     [23.4, 0.56, 4.35],
   ],
 ];
@@ -139,7 +139,7 @@ export class World {
   private shipGroup: THREE.Group;
   private shipSlots: THREE.Mesh[] = [];
   private coins: THREE.Mesh[] = [];
-  private coinMat = new THREE.MeshStandardMaterial({ color: W.coin, roughness: 0.35, metalness: 0.5 });
+  private coinMat = new THREE.MeshStandardMaterial({ color: W.coin, roughness: 0.45, metalness: 0.15 });
   private palms: THREE.Group[] = [];
   private smoke: THREE.Mesh[] = [];
   private myGroup = new THREE.Group();
@@ -217,7 +217,7 @@ export class World {
       [6.6, 3.2],
       [4.6, 6.2],
       [1.0, 8.8],
-      [6.3, 8.6],
+      [6.7, 9.25],
     ];
     for (const [x, z] of spots) {
       const t = tree(x, z, this.leafA, this.leafB);
@@ -427,16 +427,18 @@ export class World {
     }
     // 下面这些要放在恢复颜色的循环后面，不然会被恢复成原来的颜色
     // 卷帘门：本土店开着（看得见里面），跨境直发关着
-    for (const d of this.doors) (d.material as THREE.MeshStandardMaterial).color.set(local ? W.window : W.wallShade);
-    // 审核时金币停住并变灰
-    this.coinMat.color.set(view.frozen ? W.gray : W.coin);
+    const myGray = view.gray !== "none";
+    for (const d of this.doors) (d.material as THREE.MeshStandardMaterial).color.set(local ? W.window : W.wallShade).lerp(gray, myGray ? 0.75 : 0);
+    // 审核时金币停住并变灰；倒闭、封店时也变灰
+    this.coinMat.color.set(view.frozen || myGray ? W.gray : W.coin);
     this.cnGrass.color.set(view.gray === "all" ? W.gray : season.grass);
     this.leafA.color.set(view.gray === "all" ? W.gray : season.tree[0]);
     this.leafB.color.set(view.gray === "all" ? W.gray : season.tree[1]);
-    const dim = new THREE.Color(W.wall).lerp(gray, local ? 0 : 0.55);
-    this.warehouseWall.color.copy(dim);
-    this.warehouseRoof.color.set(W.roof).lerp(gray, local ? 0 : 0.6);
-    this.warehouseRoofTop.color.set(W.roofDark).lerp(gray, local ? 0 : 0.6);
+    // 仓库：跨境直发时偏暗；倒闭、封店时和马来西亚一起变灰
+    const dimBy = myGray ? 0.75 : local ? 0 : 0.55;
+    this.warehouseWall.color.set(W.wall).lerp(gray, dimBy);
+    this.warehouseRoof.color.set(W.roof).lerp(gray, myGray ? 0.75 : local ? 0 : 0.6);
+    this.warehouseRoofTop.color.set(W.roofDark).lerp(gray, myGray ? 0.75 : local ? 0 : 0.6);
     this.renderFrame(performance.now());
   }
 
