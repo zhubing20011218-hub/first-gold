@@ -5,7 +5,47 @@
     "failures": []
   },
   {
+    "page": "season-0",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-3",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
     "page": "gallery",
+    "size": "1440x680",
+    "failures": []
+  },
+  {
+    "page": "season-0",
+    "size": "1440x680",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "1440x680",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "1440x680",
+    "failures": []
+  },
+  {
+    "page": "season-3",
     "size": "1440x680",
     "failures": []
   },
@@ -15,7 +55,47 @@
     "failures": []
   },
   {
+    "page": "season-0",
+    "size": "1280x720",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "1280x720",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "1280x720",
+    "failures": []
+  },
+  {
+    "page": "season-3",
+    "size": "1280x720",
+    "failures": []
+  },
+  {
     "page": "gallery",
+    "size": "1920x1080",
+    "failures": []
+  },
+  {
+    "page": "season-0",
+    "size": "1920x1080",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "1920x1080",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "1920x1080",
+    "failures": []
+  },
+  {
+    "page": "season-3",
     "size": "1920x1080",
     "failures": []
   },
@@ -25,13 +105,98 @@
     "failures": []
   },
   {
+    "page": "season-0",
+    "size": "1024x768",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "1024x768",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "1024x768",
+    "failures": []
+  },
+  {
+    "page": "season-3",
+    "size": "1024x768",
+    "failures": []
+  },
+  {
     "page": "gallery",
+    "size": "390x844",
+    "failures": []
+  },
+  {
+    "page": "season-0",
+    "size": "390x844",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "390x844",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "390x844",
+    "failures": []
+  },
+  {
+    "page": "season-3",
     "size": "390x844",
     "failures": []
   },
   {
     "page": "gallery",
     "size": "360x780",
+    "failures": []
+  },
+  {
+    "page": "season-0",
+    "size": "360x780",
+    "failures": []
+  },
+  {
+    "page": "season-1",
+    "size": "360x780",
+    "failures": []
+  },
+  {
+    "page": "season-2",
+    "size": "360x780",
+    "failures": []
+  },
+  {
+    "page": "season-3",
+    "size": "360x780",
+    "failures": []
+  },
+  {
+    "page": "gallery（关掉 3D）",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-0（关掉 3D）",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-1（关掉 3D）",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-2（关掉 3D）",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "season-3（关掉 3D）",
+    "size": "1440x800",
     "failures": []
   }
 ]

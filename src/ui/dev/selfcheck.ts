@@ -24,6 +24,13 @@ function visible(el: Element): boolean {
   return s.visibility !== "hidden" && s.display !== "none" && Number(s.opacity) > 0;
 }
 
+/** 只给读屏软件的元素（sr-only：1 × 1 像素、被裁掉），看不见，不算跑出窗口 */
+function readerOnly(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  const st = getComputedStyle(el);
+  return st.position === "absolute" && r.width <= 1 && r.height <= 1;
+}
+
 function textElements(): HTMLElement[] {
   const out: HTMLElement[] = [];
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -50,7 +57,7 @@ export function s1(): CheckResult {
   const w = window.innerWidth;
   if (document.documentElement.scrollWidth > w) bad.push(`page scrollWidth ${document.documentElement.scrollWidth} > ${w}`);
   for (const el of Array.from(scope().querySelectorAll("*"))) {
-    if (!visible(el)) continue;
+    if (!visible(el) || readerOnly(el)) continue;
     const r = el.getBoundingClientRect();
     if (r.left < -0.5 || r.right > w + 0.5) bad.push(`${describe(el)} ${Math.round(r.left)}..${Math.round(r.right)}`);
     const st = getComputedStyle(el);

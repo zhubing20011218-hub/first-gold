@@ -1,4 +1,4 @@
-// 展示页 ?gallery=1（docs/09 第九节）：每个基础组件的每种变体和状态；三个功能区的三种状态；印章。世界和每一样模型在任务 06 第二步加上。
+// 展示页 ?gallery=1（docs/09 第九节）：每个基础组件的每种变体和状态；三个功能区的三种状态；印章。世界（切换四个季节、两种发货方式、库存的少中多）；每一样模型单独摆出来（docs/10 第三节）。
 // 这里的示例数字只用来看样子，不是游戏里的数字。
 import { useState, type ReactNode } from "react";
 import { Bar } from "../components/base/Bar";
@@ -17,6 +17,8 @@ import { AreaPanel } from "../components/biz/AreaPanel";
 import { AreaIcon } from "../components/biz/AreaIcon";
 import { zh } from "../../text/zh";
 import { formatRM } from "../store/selectors";
+import { GalleryShelf } from "./GalleryShelf";
+import { GalleryWorld } from "./GalleryWorld";
 import { gallerySamples as S } from "./gallerySamples";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -264,6 +266,13 @@ export function Gallery() {
           </div>
         </Section>
 
+        <Section title={g.world}>
+          <GalleryWorld />
+        </Section>
+
+        <Section title={g.models}>
+          <GalleryShelf />
+        </Section>
       </main>
     </div>
   );

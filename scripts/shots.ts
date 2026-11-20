@@ -18,8 +18,11 @@ const SIZES: [number, number][] = [
 ];
 
 /** 要截图的页面：名字、网址参数；scrolls 表示可以上下滚动（不查 S2）；world 表示要等世界画好。
- *  任务 06 第一步只有展示页，第二、三步再加世界和各个页面。 */
-export const PAGES: { name: string; query: string; scrolls?: boolean; world?: boolean }[] = [{ name: "gallery", query: "?gallery=1", scrolls: true }];
+ *  任务 06 第二步：展示页（含世界和每一样模型）和四个季节；第三步再加各个页面。 */
+export const PAGES: { name: string; query: string; scrolls?: boolean; world?: boolean }[] = [
+  { name: "gallery", query: "?gallery=1", scrolls: true, world: true },
+  ...[0, 1, 2, 3].map((n) => ({ name: `season-${n}`, query: `?demo=season-${n}`, world: true })),
+];
 
 interface CheckResult {
   id: string;
@@ -112,6 +115,31 @@ async function main(): Promise<void> {
         await page.close();
       }
       await context.close();
+    }
+    // S10 的后一半：关掉 WebGL 再打开有世界的页面，要看到静态的替代图，页面不报错
+    if (!process.env.SHOTS_SIZE) {
+      const no3d = await chromium.launch({ args: ["--disable-webgl", "--disable-webgl2", "--disable-3d-apis"] });
+      const context = await no3d.newContext({ viewport: { width: 1440, height: 800 }, deviceScaleFactor: 1 });
+      for (const p of pages.filter((x) => x.world)) {
+        const page = await context.newPage();
+        const errors: string[] = [];
+        page.on("console", (m: ConsoleMessage) => {
+          if (m.type() === "error") errors.push(m.text());
+        });
+        page.on("pageerror", (e) => errors.push(e.message));
+        await page.goto(base + p.query, { waitUntil: "networkidle" });
+        await waitWorld(page);
+        await page.evaluate(() => document.fonts.ready);
+        const failures = await checkPage(page, Boolean(p.scrolls), 1440, 800);
+        const fallback = await page.evaluate(() => document.querySelectorAll("[data-world-fallback]").length);
+        if (fallback === 0) failures.push("S10：关掉 WebGL 之后没有显示替代图");
+        if (errors.length > 0) failures.push(`S5：控制台报错 ${errors.slice(0, 3).join("；")}`);
+        await page.screenshot({ path: join(OUT, `${p.name}-no3d-1440x800.png`) });
+        all.push({ page: `${p.name}（关掉 3D）`, size: "1440x800", failures });
+        await page.close();
+      }
+      await context.close();
+      await no3d.close();
     }
   } finally {
     await browser.close();
