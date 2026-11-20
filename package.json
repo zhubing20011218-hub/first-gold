@@ -11,12 +11,18 @@
     "check": "node scripts/check/run.mjs",
     "check:full": "node scripts/check/run.mjs --full",
     "prepare": "git config core.hooksPath .githooks",
-    "sim": "vite build --ssr scripts/simulate.ts --outDir node_modules/.sim --emptyOutDir --logLevel warn && node node_modules/.sim/simulate.js"
+    "sim": "vite build --ssr scripts/simulate.ts --outDir node_modules/.sim --emptyOutDir --logLevel warn && node node_modules/.sim/simulate.js",
+    "shots": "vite build --logLevel warn && vite build --ssr scripts/shots.ts --outDir node_modules/.shots --emptyOutDir --logLevel warn && node node_modules/.shots/shots.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@fontsource/barlow-semi-condensed": "^5.3.0",
+    "@radix-ui/react-dialog": "^1.3.1",
+    "@radix-ui/react-popover": "^1.3.1",
+    "clsx": "^2.1.1",
+    "motion": "^14.14.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
@@ -26,6 +32,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "playwright": "^1.65.1",
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",

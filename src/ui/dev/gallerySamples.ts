@@ -1,0 +1,38 @@
+// 展示页上的示例数字。只用来看组件的样子，游戏里的数字都来自模型。
+import type { StampTone } from "../components/base/Stamp";
+
+export const gallerySamples = {
+  cashFen: 648000,
+  lossFen: -2087,
+  priceSen: 1990,
+  priceYuanFen: 3284,
+  stock: 320,
+  onWay: 86,
+  expMonthly: 264,
+  stockDays: 36,
+  push: 72,
+  pushDelta: 7,
+  pushParts: [14, 18, 12, 16, 12],
+  stepperQty: 620,
+  badQty: 30,
+  moq: 50,
+  priceRm: 19.9,
+  rivalBidFen: 36,
+  lastWanted: 812,
+  lastLost: 23,
+  moneyOnWayFen: 125000,
+  sureInFen: 82000,
+  upgradeCostFen: 116000,
+  stamps: [
+    ["won", "gold"],
+    ["delivered", "gold"],
+    ["checked", "gold"],
+    ["survived", "sea"],
+    ["lost", "hibiscus"],
+    ["defaulted", "hibiscus"],
+    ["audit", "hibiscus"],
+    ["banned", "hibiscus"],
+    ["bankrupt", "hibiscus"],
+    ["mismatch", "hibiscus"],
+  ] as [keyof typeof import("../../text/zh").zh.stamps, StampTone][],
+};

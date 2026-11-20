@@ -1,0 +1,124 @@
+/* Tailwind 的主题。值和 src/ui/theme/tokens.ts 一样（tests/theme.test.ts 核对两边一致）。
+   只用这里定义的值，不写任意值（docs/12 第一节）。 */
+@import "tailwindcss";
+@import "@fontsource/barlow-semi-condensed/500.css";
+@import "@fontsource/barlow-semi-condensed/700.css";
+
+@theme {
+  --color-*: initial;
+  --color-ink: #10212b;
+  --color-sea: #0f8f8c;
+  --color-gold: #e0a21b;
+  --color-gold-text: #8f6400;
+  --color-gold-soft: #fbf1d6;
+  --color-hibiscus: #d8434a;
+  --color-paper: #ffffff;
+  --color-sea-soft: #e3f4f3;
+  --color-line: #c9d8d6;
+  --color-muted: #5c7078;
+  --color-disabled-bg: #e4eaeb;
+  --color-disabled-text: #8a9a9f;
+  --color-scrim: #10212b;
+  --color-area-purchase: #0f8f8c;
+  --color-area-ops: #e0672b;
+  --color-area-finance: #3e5c9a;
+  --color-transparent: transparent;
+
+  /* 字号只用 12、14、16、20、28、40、56（docs/08 第四节） */
+  --text-*: initial;
+  --text-cap: 12px;
+  --text-body: 14px;
+  --text-em: 16px;
+  --text-title: 20px;
+  --text-screen: 28px;
+  --text-big: 40px;
+  --text-hero: 56px;
+
+  --font-*: initial;
+  --font-sans: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", sans-serif;
+  --font-num: "Barlow Semi Condensed", "PingFang SC", sans-serif;
+
+  --radius-*: initial;
+  --radius-control: 14px;
+  --radius-dialog: 18px;
+  --radius-full: 9999px;
+
+  /* 间距用 Tailwind 的 4 像素一档：1=4、2=8、3=12、4=16、6=24、8=32、12=48 */
+  --spacing: 4px;
+
+  /* 固定的尺寸（docs/08 第二节、docs/09 第四节） */
+  --spacing-topbar: 44px;
+  --spacing-inquiry: 236px;
+  --spacing-area: 176px;
+  --spacing-bar: 70px;
+  --spacing-content: 1440px;
+  --spacing-popup: 560px;
+  --spacing-popup-push: 360px;
+  --spacing-popup-bill: 880px;
+  --spacing-popup-source: 480px;
+  --spacing-popup-short: 520px;
+  --spacing-hit: 44px;
+  --spacing-hit-desk: 32px;
+  --spacing-figure: 132px;
+  --spacing-figure-sm: 96px;
+  /* 弹窗：手机上最高到屏幕的 85%；电脑上不超出屏幕；P1 到 P4 在决定栏的正上方；P5 在推流分的正下方 */
+  --spacing-sheet: 85dvh;
+  --spacing-popup-max: calc(100dvh - 32px);
+  /* P1 到 P4 在前排的正上方：前排顶边是窗口底边往上 280 */
+  --spacing-popup-mid: 288px;
+  --spacing-popup-mid-max: calc(100dvh - 288px - 16px);
+  --spacing-popup-top: 72px;
+  --spacing-world-top: 520px;
+  --spacing-gallery-world: 480px;
+  /* 开局的三步选择占前排加底部的位置（520 到 784） */
+  --spacing-setup: 264px;
+
+  --shadow-*: initial;
+  --shadow-solid: 0 4px 0 #10212b;
+  --shadow-solid-sm: 0 3px 0 #10212b;
+  --shadow-dialog: 0 6px 0 #10212b;
+  --shadow-none: 0 0 0 #10212b;
+}
+
+/* 开局的三列：商品、发货方式（两张并排）、第一批进货 */
+@utility grid-cols-setup {
+  grid-template-columns: 1fr 1.6fr 1fr;
+}
+@utility grid-cols-setup-dl {
+  grid-template-columns: auto 1fr;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-sea);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}

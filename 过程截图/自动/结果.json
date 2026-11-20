@@ -1,0 +1,27 @@
+[
+  {
+    "page": "gallery",
+    "size": "1440x800",
+    "failures": []
+  },
+  {
+    "page": "gallery",
+    "size": "1440x680",
+    "failures": []
+  },
+  {
+    "page": "gallery",
+    "size": "1280x720",
+    "failures": []
+  },
+  {
+    "page": "gallery",
+    "size": "1920x1080",
+    "failures": []
+  },
+  {
+    "page": "gallery",
+    "size": "390x844",
+    "failures": []
+  }
+]

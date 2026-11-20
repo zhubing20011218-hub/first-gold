@@ -155,6 +155,25 @@ describe("规则检查", () => {
     expect(hits, show(hits)).toEqual([]);
   });
 
+  it("R4 src/ui、src/scene 里没有直接写的颜色值（设计变量的文件 src/ui/theme/tokens.ts 除外）", () => {
+    const files = uiLike.filter((f) => f !== join("src", "ui", "theme", "tokens.ts"));
+    expect(files.length).toBeGreaterThan(5);
+    const hits = findHits(files, /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_])/, { code: true });
+    expect(hits, show(hits)).toEqual([]);
+  });
+
+  it("R9 src/ui、src/scene 的类名里没有 Tailwind 的任意值（-[ 这种写法）", () => {
+    const hits = findHits(uiLike, /[a-z0-9]-\[[^\]]+\]/, { code: true }).filter((h) => /class|clsx|cn\(|["'`]/.test(h.text));
+    expect(hits, show(hits)).toEqual([]);
+  });
+
+  it("R10 界面的组件不直接引用 engine 和 plan（只能通过 store/actions.ts 和 store/selectors.ts）", () => {
+    const files = ["src/ui/stages", "src/ui/popups", "src/ui/components"].flatMap(listFiles);
+    expect(files.length).toBeGreaterThan(5);
+    const hits = badImports(files, /(^|\/)(engine|plan)(\/|$)/);
+    expect(hits, show(hits)).toEqual([]);
+  });
+
   it("R5 src/ui、src/scene、src/engine、src/plan 的代码里没有中文（注释里可以有）", () => {
     const hits = findHits([...uiLike, ...engineFiles, ...planFiles], /[㐀-鿿＀-￯　-〿]/, {
       code: true,
