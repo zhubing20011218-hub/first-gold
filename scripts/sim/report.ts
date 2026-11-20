@@ -221,7 +221,7 @@ function conclusions(input: ReportInput): string[] {
   const retailOnly = rows.filter((r) => r.strategy === "conservative");
   const oneLineWins = [...bulkOnly, ...retailOnly].filter((r) => gold(r) >= 9000);
   para(
-    `**3. 零售和大单：${bulkShare < 5000 ? "零售更赚钱" : "大单更赚钱"}，大单${avg(bulkOnly.map(gold)) > 0 ? "也有用" : "没什么用"}。** 判断标准：大单的收入占总收入不到一半算零售更赚钱；只做大单的打法平均第一桶金的比例大于 0 算大单也有用。大单的收入（收到的定金和尾款，减去违约退回的定金）平均只占总收入的 ${pct(Math.round(bulkShare))}。` +
+    `**3. 零售和大单：${bulkShare < 5000 ? "零售更赚钱" : "大单更赚钱"}，大单${bulkShare >= 1000 ? "也有用" : "没什么用"}。** 判断标准（任务 04 第二节）：大单的收入平均占总收入不到一半算零售更赚钱；占一成以上算大单有用；只做一条线、九成以上赚到第一桶金的组合算只做一条线就能赢。大单的收入（收到的定金和尾款，减去违约退回的定金）平均只占总收入的 ${pct(Math.round(bulkShare))}。` +
       `只做大单的 18 个组合（零售按最高价照样在卖），平均第一桶金 ${pct(Math.round(avg(bulkOnly.map(gold))))}，倒闭或被封店 ${pct(Math.round(avg(bulkOnly.map(dead))))}，平均每局中标 ${f1(avg(bulkOnly.map((r) => r.bulkWonAvg)))} 张、违约 ${f1(avg(bulkOnly.map((r) => r.bulkDefaultedAvg)))} 张；不做大单的保守打法，平均第一桶金 ${pct(Math.round(avg(retailOnly.map(gold))))}。` +
       `只做一条线就能稳赢（九成以上）的 ${oneLineWins.length} 个：${listAll(oneLineWins.map(name))}。`,
   );
@@ -229,7 +229,7 @@ function conclusions(input: ReportInput): string[] {
   // 4. 同一个种子下，不同的打法结果是否不同（第 4 问）
   const ties = input.sandbox.reduce((s, x) => s + x.seedsWithTies, 0);
   const seeds = input.sandbox.reduce((s, x) => s + x.seeds, 0);
-  para(`**4. 沙盘：${ties === 0 ? "成立" : ties * 10 < seeds ? "基本成立" : "不成立"}。** 判断标准：没有一个种子出现两种打法结果完全一样算成立，有但不到一成的种子算基本成立，一成以上算不成立。同一个种子下，各种打法的净资产两两比较，${seeds} 个种子里有 ${ties} 个出现了两种打法结果完全一样（第三节的小表）。`);
+  para(`**4. 沙盘：${ties === 0 ? "成立" : ties * 10 < seeds ? "基本成立" : "不成立"}。** 判断标准（任务 04 第二节）：没有一个种子出现两种打法结果完全一样算成立，有但不到一成的种子算基本成立，一成以上算不成立。同一个种子下，各种打法的净资产两两比较，${seeds} 个种子里有 ${ties} 个出现了两种打法结果完全一样（第三节的小表）。`);
 
   // 5. 有没有一种打法稳赢；有没有一开局就倒闭（第 5 问）
   const winners: string[] = [];

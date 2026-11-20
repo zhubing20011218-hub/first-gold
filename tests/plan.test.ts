@@ -193,6 +193,12 @@ describe("另外要测试的（docs/06 第 10.4 节）", () => {
     // 换掉的季度用参考价，下一个季度回到玩家定的售价
     expect(swapped[k * 90 + 1].priceSen).toBe(product.refPriceSen);
     expect(swapped[(k + 1) * 90 + 1].priceSen).toBe(decisions[k + 1].priceSen);
+    // 季度中间的选择按询价编号对上：对不上的当作"不处理"，和一个选择都没有一样
+    const none = decisions.map((d) => ({ ...d, bulkShortChoices: [] }));
+    const wrongId = decisions.map((d) => ({ ...d, bulkShortChoices: [{ inquiryId: "no-such-inquiry", choice: "rush" as const }] }));
+    const ignoredAll = keyDecisionRun(config, none, product, P, null);
+    expect(keyDecisionRun(config, wrongId, product, P, null)).toEqual(ignoredAll);
+    expect(ignoredAll).not.toEqual(real);
     // keyDecision 的"玩家的净资产"就是真实那一局的
     const kd = keyDecision(config, decisions, product, P);
     expect(kd?.playerNetWorthFen).toBe(netWorthFen(real, product, P));
@@ -202,19 +208,44 @@ describe("另外要测试的（docs/06 第 10.4 节）", () => {
     expect(pickKeyQuarter(100, [110, 300, -100])?.quarter).toBe(1);
     expect(pickKeyQuarter(100, [110, 120, 400])).toEqual({ quarter: 2, playerNetWorthFen: 100, referenceNetWorthFen: 400 });
     expect(pickKeyQuarter(100, [])).toBeNull();
+    // 比的是变化的绝对值：变少 200 比变多 50 大
+    expect(pickKeyQuarter(100, [150, -100])?.quarter).toBe(1);
   });
-  it("3. 玩家没有的季度：沿用上一个季度的售价和补货量，不买合规、不升级，一直算到结束", () => {
-    const config = { seed: 5, productId: "hijab", fulfillment: "cross" as const, startCashFen: 2000000, firstStockQty: 300 };
-    const decs = [0, 1, 2].map(() => decision({ monthlyRestockQty: 200, priceSen: 2190 }));
+  it("3. 玩家没有的季度：沿用这一局上一个季度的补货量、售价和广告，不报大单、不买合规、不升级，一直算到结束", () => {
+    const config = { seed: 5, productId: "hijab", fulfillment: "local" as const, startCashFen: 3000000, firstStockQty: 300 };
+    const first = createGame(config, hijab, P).state;
+    const q2Inquiry = first.schedule.inquiries.find((i) => i.quarter === 2);
+    expect(q2Inquiry).toBeDefined();
+    const base = decision({ monthlyRestockQty: 200, priceSen: 2190, adBidFen: 40, adDailyBudgetFen: 3000 });
+    const decs = [
+      base,
+      base,
+      { ...base, buyCompliance: true, upgradeToLocal: true, bulkQuotes: q2Inquiry ? [{ inquiryId: q2Inquiry.id, unitPriceSen: hijab.bulkRefPriceSen }] : [] },
+    ];
+    // 不换季度：第 3 个季度以后沿用玩家第 2 个季度的补货量、售价、广告；合规只在第 2 个季度买了一次
     const seen: GameState[] = [];
     const end = keyDecisionRun(config, decs, hijab, P, null, (st) => seen.push(st));
-    expect(end.day).toBeGreaterThanOrEqual(720);
+    // 一直算到这一局结束（这一局没有撑到第 720 天也算结束）
     expect(["finished", "bankrupt", "banned"]).toContain(end.phase);
-    for (const day of [271, 451, 631]) {
+    expect(seen.length).toBeGreaterThan(452);
+    for (const day of [271, 451]) {
       expect(seen[day].priceSen).toBe(2190);
       expect(seen[day].monthlyRestockQty).toBe(200);
-      expect(seen[day].fulfillment).toBe("cross");
+      expect(seen[day].adBidFen).toBe(40);
+      expect(seen[day].adDailyBudgetFen).toBe(3000);
     }
+    expect(seen[271].totals.complianceFen).toBe(P.complianceCostFen.value);
+    expect(end.totals.complianceFen).toBe(P.complianceCostFen.value);
+    // 换掉第 2 个季度：以后的季度沿用的是参考做法的值（参考价、不投广告）
+    const swapped: GameState[] = [];
+    keyDecisionRun(config, decs, hijab, P, 2, (st) => swapped.push(st));
+    expect(swapped.length).toBeGreaterThan(272);
+    for (const day of [181, 271]) {
+      expect(swapped[day].priceSen).toBe(hijab.refPriceSen);
+      expect(swapped[day].adBidFen).toBe(0);
+      expect(swapped[day].adDailyBudgetFen).toBe(0);
+    }
+    expect(swapped[swapped.length - 1].totals.complianceFen).toBe(0);
   });
   it("4. 为什么：最多 3 条，顺序和文档一样", () => {
     const order = [
@@ -449,5 +480,42 @@ describe("固定数字：为什么的三个门槛", () => {
     const up = (n: number): GameState => ({ ...s, pushScore: { ...s.pushScore, sales: s.pushScore.sales + n } });
     expect(causeKeys([], up(5))).toContain("cause_push_up");
     expect(causeKeys([], up(4))).not.toContain("cause_push_up");
+  });
+});
+
+describe("固定数字：第 10 版写明的几处", () => {
+  it("开局三张卡：第 i 种取这一类里的第 ((seed >>> 0) >>> i) % 个数 个", async () => {
+    const { setupCards } = await import("../src/plan/setup");
+    const ids = (seed: number) => setupCards(seed, products).map((p) => p.id);
+    expect(ids(0)).toEqual(["phone_case", "hijab", "blouse"]);
+    expect(ids(1)).toEqual(["arm_sleeve", "hijab", "blouse"]);
+    expect(ids(5)).toEqual(["arm_sleeve", "hijab", "earbuds"]);
+    expect(ids(7)).toEqual(["arm_sleeve", "mini_fan", "earbuds"]);
+  });
+  it("第一批进货的默认值是最大件数（已经按供应商上限截过）的一半", async () => {
+    const { defaultFirstStock, maxFirstStock } = await import("../src/plan/setup");
+    expect(maxFirstStock(100000000, "cross", hijab, P)).toBe(800);
+    expect(defaultFirstStock(100000000, "cross", hijab, P)).toBe(400);
+  });
+  it("收尾阶段的结论是 continue", () => {
+    expect(settleVerdict({ ...r1State(), phase: "closing" })).toBe("continue");
+  });
+  const s = r1State();
+  const keysOf = (events: GameEvent[], end: GameState) => quarterCauses(0, events, s, end, hijab, P);
+  it("cause_storage：压着的货 = 季末库存 − 季末那个月发出的零售和大单", () => {
+    const end: GameState = { ...s, fulfillment: "local", stockQty: 100, monthStats: { ...s.monthStats, shipped: 20, bulkUnits: 30 } };
+    const c = keysOf([ev({ type: "month_started", day: 30, fixedCostFen: 0, storageFeeFen: 700, push: {} })], end).find((x) => x.key === "cause_storage");
+    expect(c?.data).toEqual({ qty: 50, feeFen: 700 });
+  });
+  it("cause_ads_loss：每单的广告费四舍五入", () => {
+    const ads = ev({ type: "ads_ran", day: 5, budgetFen: 30001, adSpendFen: 30001, clicks: 9, adOrders: 2, refBidFen: 0, demandBp: 10000 });
+    const c = keysOf([ads], s).find((x) => x.key === "cause_ads_loss");
+    expect(c?.data.costFen).toBe(15001);
+  });
+  it("cause_bulk_reserved：算上已中标、还没发货的大单", () => {
+    const won = { ...x2State().bulkOrders[0], status: "won" as const, qty: 40, shipDay: 120, warnDay: 110, dueDay: 120, balanceDay: null };
+    const shipped = ev({ type: "orders_shipped", day: 5, organicOrders: 100, adOrders: 0, shipped: 97, lost: 3, perOrderFeeFen: 0, payoutFenEach: 0, demandBp: 10000 });
+    const c = keysOf([shipped, ev({ type: "bulk_shipped", day: 50, qty: 25 })], { ...s, bulkOrders: [won] }).find((x) => x.key === "cause_bulk_reserved");
+    expect(c?.data).toEqual({ qty: 65 });
   });
 });

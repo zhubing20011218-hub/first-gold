@@ -10,7 +10,7 @@ export function maxFirstStock(cashFen: number, f: Fulfillment, product: Product,
   return Math.min(product.supplierMonthlyCap, affordableQty(cashFen - setup, f, product, params));
 }
 
-/** 默认值：买得起的件数的一半，按 10 取整，不低于起订量 */
+/** 默认值：最大件数（已经按供应商上限截过）的一半，按 10 件向下取整，不低于起订量（docs/09 第五节，第 10 版） */
 export function defaultFirstStock(cashFen: number, f: Fulfillment, product: Product, params: Params): number {
   return Math.max(product.moq, Math.floor(maxFirstStock(cashFen, f, product, params) / 2 / 10) * 10);
 }
