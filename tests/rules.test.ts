@@ -223,7 +223,11 @@ describe("规则检查", () => {
         return;
       }
       count++;
-      if (typeof o.value !== "number" || !Number.isFinite(o.value)) problems.push(`${path}.value 不是数字`);
+      // 数组类型的参数，value 直接放数组（docs/04 第十二节）
+      const values = Array.isArray(o.value) ? o.value : [o.value];
+      if (values.length === 0 || !values.every((x) => typeof x === "number" && Number.isFinite(x))) {
+        problems.push(`${path}.value 不是数字或数字的数组`);
+      }
       if (typeof o.unit !== "string" || o.unit === "") problems.push(`${path}.unit 缺少`);
       if (o.source !== "A" && o.source !== "B" && o.source !== "C") problems.push(`${path}.source 不是 A、B、C`);
       if (typeof o.note !== "string" || o.note === "") problems.push(`${path}.note 缺少`);

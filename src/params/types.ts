@@ -11,3 +11,8 @@ export interface Param {
   /** true 时会显示在"这些数字从哪来"的页面上 */
   public: boolean;
 }
+
+/** 数组类型的参数，value 直接放数组（docs/04 第十二节） */
+export interface ArrayParam extends Omit<Param, "value"> {
+  value: readonly number[];
+}
