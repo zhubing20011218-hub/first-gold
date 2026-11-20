@@ -1,5 +1,7 @@
 // ?demo= 的固定状态（docs/09 第九节）：种子固定，全部用 actions 和模型一步一步算出来，不手写假数据。
 import * as A from "../store/actions";
+import { financeOf, referenceOf } from "../store/selectors";
+import { getProduct } from "../../products/catalog";
 import { initialUi, type UiState } from "../store/state";
 
 const SEED = 20261120;
@@ -61,6 +63,31 @@ function bulkShort(): UiState {
   return A.skipPlay(A.startQuarterPlay(ui));
 }
 
+/** 用一种打法把一整局玩完（四种结局的演示用），全部走 actions，大单货不够时加急 */
+function wholeGame(productId: string, f: "cross" | "local", seed: number, style: "balanced" | "reference"): UiState {
+  let u = A.openShop(A.pickFulfillment(A.pickProduct(A.startNewGame(initialUi(), seed), productId), f));
+  const pr = getProduct(productId);
+  for (let guard = 0; guard < 10 && u.stage === "decide"; guard++) {
+    const ref = referenceOf(u);
+    const g = u.game;
+    if (!ref || !g) break;
+    const q = Math.floor(g.day / 90);
+    const want = Math.min(pr.supplierMonthlyCap, Math.max(pr.moq, Math.ceil((ref.expMonthly * (style === "balanced" ? 12 : 10)) / 100) * 10));
+    if (style === "balanced") {
+      u = A.setDecision(u, "purchase", { monthlyRestockQty: want });
+      const quotes = g.schedule.inquiries.filter((i) => i.quarter === q && i.qty <= g.stockQty + want).map((i) => ({ inquiryId: i.id, unitPriceSen: pr.bulkRefPriceSen }));
+      u = A.setDecision(u, "ops", { priceSen: pr.refPriceSen, adBidFen: Math.floor((ref.refBidFen * 8) / 10), adDailyBudgetFen: 3000, bulkQuotes: quotes });
+      u = A.setDecision(u, "finance", { buyCompliance: f === "local" && financeOf(u)?.risk !== "low" });
+    } else {
+      u = A.setDecision(u, "purchase", { monthlyRestockQty: ref.expMonthly === 0 ? 0 : want });
+      u = A.setDecision(u, "ops", { priceSen: pr.refPriceSen, adBidFen: 0, adDailyBudgetFen: 0, bulkQuotes: [] });
+      u = A.setDecision(u, "finance", {});
+    }
+    u = A.playQuarterThrough(u, () => "rush");
+  }
+  return u;
+}
+
 export function demoState(name: string): UiState | null {
   switch (name) {
     case "home":
@@ -95,6 +122,16 @@ export function demoState(name: string): UiState | null {
       return A.openDesk(quarters(3), "purchase");
     case "popup-bulkshort":
       return bulkShort();
+    case "ending-goal":
+      return wholeGame("arm_sleeve", "cross", 2, "balanced");
+    case "ending-survive":
+      return wholeGame("hijab", "cross", 1, "reference");
+    case "ending-banned":
+      return wholeGame("phone_case", "local", 1, "reference");
+    case "ending-bankrupt":
+      return A.declareBankruptcy(bankruptSettle());
+    case "panel":
+      return A.openPopup(quarters(3), "source");
     case "season-0":
     case "season-1":
     case "season-2":

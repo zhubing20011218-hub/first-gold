@@ -21,7 +21,7 @@ const SIZES: [number, number][] = [
  *  任务 06 第二步：展示页（含世界和每一样模型）和四个季节；第三步再加各个页面。 */
 export const PAGES: { name: string; query: string; scrolls?: boolean; world?: boolean }[] = [
   { name: "gallery", query: "?gallery=1", scrolls: true, world: true },
-  ...["home", "setup", "decide", "popup-stock", "popup-retail", "popup-bulk", "popup-risk", "popup-push", "popup-source", "play", "settle", "settle-bankrupt", "popup-bill", "popup-desk", "popup-bulkshort", "season-0", "season-1", "season-2", "season-3"].map(
+  ...["home", "setup", "decide", "popup-stock", "popup-retail", "popup-bulk", "popup-risk", "popup-push", "popup-source", "play", "settle", "settle-bankrupt", "popup-bill", "popup-desk", "popup-bulkshort", "ending-goal", "ending-survive", "ending-bankrupt", "ending-banned", "panel", "season-0", "season-1", "season-2", "season-3"].map(
     (n) => ({ name: n, query: `?demo=${n}`, world: true }),
   ),
 ];

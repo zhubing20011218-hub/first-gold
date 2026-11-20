@@ -30,6 +30,7 @@ export interface Store extends UiState {
   declareBankruptcy: () => void;
   seeResult: () => void;
   nextQuarter: () => void;
+  retrySameSeed: () => void;
   nextCoach: () => void;
   /** 只给 ?demo= 用：直接放进一个用模型算好的界面状态 */
   load: (ui: UiState) => void;
@@ -57,6 +58,7 @@ export const useStore = create<Store>((set, get) => {
     declareBankruptcy: () => run(A.declareBankruptcy),
     seeResult: () => run(A.seeResult),
     nextQuarter: () => run(A.nextQuarter),
+    retrySameSeed: () => run(A.retrySameSeed),
     nextCoach: () => run(A.nextCoach),
     load: (ui) => set(ui),
   };

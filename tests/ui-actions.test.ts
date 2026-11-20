@@ -261,3 +261,53 @@ describe("取数", () => {
     expect(worldViewOf(playQuarterThrough(decided(u))).season).toBe(1);
   });
 });
+
+describe("结局（任务 08）", () => {
+  it("四种结局都能走到，结局的种类、净资产和现金曲线对得上；倒闭和被封店也有现金曲线", async () => {
+    const { demoState } = await import("../src/ui/dev/demoStates");
+    const { endingOf } = await import("../src/ui/store/selectors");
+    const { netWorthFen } = await import("../src/engine/summary");
+    const want: Record<string, string> = { "ending-goal": "goal", "ending-survive": "survived", "ending-bankrupt": "bankrupt", "ending-banned": "banned" };
+    for (const [name, kind] of Object.entries(want)) {
+      const u = demoState(name);
+      const e = u ? endingOf(u) : null;
+      expect(e?.kind, name).toBe(kind);
+      expect(e?.netWorthFen).toBe(netWorthFen(u!.game!, getProduct(u!.game!.config.productId), P));
+      expect(e!.curve.length).toBeGreaterThan(80);
+      expect(e!.curve[e!.curve.length - 1]).toBe(u!.game!.cashFen);
+      // 海报的数字来自 src/plan/poster
+      expect(e!.poster.fillBp).toBe(Math.max(0, Math.min(10000, Math.floor((e!.netWorthFen * 10000) / P.goalNetWorthFen.value))));
+    }
+  });
+  it("同一局再试一次：同一个种子回到开局，商品和发货方式照上一局选好", async () => {
+    const { retrySameSeed } = await import("../src/ui/store/actions");
+    const u = declareBankruptcy(skipPlay(startQuarterPlay(setDecision(setDecision(setDecision(opened(9, "cross"), "purchase", { monthlyRestockQty: 800 }), "ops", { priceSen: hijab.refPriceSen, adBidFen: 200, adDailyBudgetFen: 20000 }), "finance", {}))));
+    expect(u.stage).toBe("ending");
+    const r = retrySameSeed(u);
+    expect(r.stage).toBe("setup");
+    expect(r.seed).toBe(9);
+    expect(r.setup.productId).toBe("hijab");
+    expect(r.setup.fulfillment).toBe("cross");
+    expect(r.decisions).toEqual([]);
+  });
+  it("本地最好成绩：读写失败时不报错；只记更高的", async () => {
+    const { readBest, saveBest } = await import("../src/ui/app/bestScore");
+    // 没有 localStorage（测试环境）：不报错，当作没有
+    expect(readBest()).toEqual({});
+    expect(() => saveBest("hijab", 100)).not.toThrow();
+    const store = new Map<string, string>();
+    const g = globalThis as unknown as { window?: { localStorage: Storage } };
+    const old = g.window;
+    g.window = { localStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) } as unknown as Storage };
+    try {
+      saveBest("hijab", 300000);
+      saveBest("hijab", 200000);
+      saveBest("earbuds", 500000);
+      expect(readBest()).toEqual({ hijab: 300000, earbuds: 500000 });
+      store.set("first-gold.best", "{broken");
+      expect(readBest()).toEqual({});
+    } finally {
+      g.window = old;
+    }
+  });
+});

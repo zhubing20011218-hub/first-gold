@@ -82,6 +82,8 @@ export interface UiState {
   report: QuarterReport | null;
   /** 所有出现过的提醒（工作台里能翻到） */
   reminderLog: Reminder[];
+  /** 两年里每一天结束时的现金（结局的现金曲线） */
+  cashCurve: number[];
   /** 只给 ?demo= 用：播放停在某一天不往前走（截图每次一样） */
   playPaused: boolean;
   bills: Bill[][];
@@ -114,6 +116,7 @@ export function initialUi(): UiState {
     report: null,
     reminderLog: [],
     playPaused: false,
+    cashCurve: [],
     bills: [],
     billConfirmed: false,
     history: [],

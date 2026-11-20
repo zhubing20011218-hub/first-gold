@@ -6,7 +6,7 @@ import { getProduct } from "../../products/catalog";
 import { inTransitBatches, reservedQty } from "../../engine/game";
 import { netWorthFen, riskLevel } from "../../engine/summary";
 import { pricePoints, pushBpOf } from "../../engine/push";
-import { senToFen } from "../../engine/money";
+import { formatRM, formatYuan, senToFen } from "../../engine/money";
 import { cashPlan, sureInFen, type CashPlan } from "../../plan/cashPlan";
 import { referenceNumbers, type ReferenceNumbers } from "../../plan/reference";
 import { allConfirmed } from "./actions";
@@ -21,6 +21,10 @@ import type { Reminder as PlanReminder } from "../../plan/reminders";
 import { playReminders } from "../../plan/reminders";
 import { quarterStartCashFen } from "./actions";
 import type { QuarterReport } from "./state";
+import { keyDecision, type KeyDecision } from "../../plan/keyDecision";
+import { posterNumbers } from "../../plan/poster";
+import { settleOrder } from "../../engine/settle";
+import { storageFeeFen } from "../../engine/stock";
 
 const P = malaysia;
 export const params = P;
@@ -370,12 +374,108 @@ export function debugCashOf(ui: UiState): { ok: boolean; startFen: number; sumFe
   return { ok: startFen + sumFen === g.cashFen, startFen, sumFen, cashFen: g.cashFen };
 }
 
-/** 结局（任务 08 会做完整的）：怎么结束的、净资产、目标 */
-export function endingOf(ui: UiState): { kind: "goal" | "survived" | "bankrupt" | "banned"; netWorthFen: number; goalFen: number } | null {
+/** 最关键的决定要把整局重算 8 遍，按这一局的决定列表缓存起来 */
+const keyCache = new WeakMap<object, KeyDecision | null>();
+function keyOf(ui: UiState): KeyDecision | null {
+  const g = ui.game;
+  if (!g || ui.decisions.length === 0) return null;
+  const hit = keyCache.get(ui.decisions);
+  if (hit !== undefined) return hit;
+  const k = keyDecision(g.config, ui.decisions, getProduct(g.config.productId), P);
+  keyCache.set(ui.decisions, k);
+  return k;
+}
+
+export type EndingKind = "goal" | "survived" | "bankrupt" | "banned";
+
+/** 结局（docs/07 第四节"结局"、任务 08） */
+export function endingOf(ui: UiState) {
   const g = ui.game;
   if (!g || ui.stage !== "ending") return null;
-  const nw = netWorthFen(g, getProduct(g.config.productId), P);
+  const product = getProduct(g.config.productId);
+  const nw = netWorthFen(g, product, P);
   const goalFen = P.goalNetWorthFen.value;
-  const kind = g.phase === "bankrupt" ? "bankrupt" : g.phase === "banned" ? "banned" : nw >= goalFen ? "goal" : "survived";
-  return { kind, netWorthFen: nw, goalFen };
+  const kind: EndingKind = g.phase === "bankrupt" ? "bankrupt" : g.phase === "banned" ? "banned" : nw >= goalFen ? "goal" : "survived";
+  const curve = ui.cashCurve;
+  let lowIndex = 0;
+  curve.forEach((c, i) => {
+    if (c < curve[lowIndex]) lowIndex = i;
+  });
+  const key = keyOf(ui);
+  let lowQuarter = 0;
+  ui.history.forEach((h) => {
+    if (h.endCashFen < (ui.history[lowQuarter]?.endCashFen ?? Infinity)) lowQuarter = h.quarter;
+  });
+  return {
+    kind,
+    netWorthFen: nw,
+    goalFen,
+    startFen: g.config.startCashFen,
+    curve,
+    low: curve.length > 0 ? { index: lowIndex, cashFen: curve[lowIndex] } : null,
+    // 换哪个季度净资产都不变时，没有"最关键的决定"
+    key: key && key.referenceNetWorthFen !== key.playerNetWorthFen ? key : null,
+    totals: {
+      retail: g.totals.ordersShipped,
+      lost: g.totals.lostSales,
+      bulkDelivered: g.totals.bulkDelivered,
+      adsFen: g.totals.adSpendFen,
+      lowQuarter,
+    },
+    poster: posterNumbers(nw, P),
+    productId: g.config.productId,
+    fulfillment: g.config.fulfillment,
+    seed: g.config.seed,
+  };
+}
+
+// ---------- 数字从哪来（P7，任务 08 第一节第 8 条）：参数从参数表里读，例子用模型算 ----------
+type ParamRow = { value: unknown; unit: string; source: string; note: string; public: boolean };
+
+function bpText(v: number): string {
+  return `${Number.isInteger(v / 100) ? (v / 100).toFixed(0) : (v / 100).toFixed(2).replace(/0$/, "")}%`;
+}
+
+/** 参数的值按单位排成人看得懂的样子 */
+export function paramValueText(p: ParamRow): string {
+  const one = (v: number): string => {
+    switch (p.unit) {
+      case "fen":
+        return formatYuan(v);
+      case "sen":
+        return formatRM(v);
+      case "bp":
+        return bpText(v);
+      case "E4":
+        return `RM 1 = ¥${(v / 10000).toFixed(2)}`;
+      default:
+        // 评分的单位是"0.1 分"：显示成一位小数，单位用参数表里写的
+        if (p.unit.startsWith("0.1")) return `${(v / 10).toFixed(1)} ${p.unit.replace(/^0\.1\s*/, "")}`;
+        return `${v} ${p.unit}`;
+    }
+  };
+  return Array.isArray(p.value) ? (p.value as number[]).map(one).join(" / ") : one(p.value as number);
+}
+
+/** 公开的参数分两组：B 来自真实经营，C 是设计值（A 级的也算进"真实"那一组） */
+export function paramGroupsOf(): { real: { name: string; note: string; value: string }[]; design: { name: string; note: string; value: string }[] } {
+  const rows = Object.entries(P as unknown as Record<string, ParamRow>).filter(([, p]) => p.public);
+  const map = ([name, p]: [string, ParamRow]) => ({ name, note: p.note.split("\u3002")[0], value: paramValueText(p) });
+  return { real: rows.filter(([, p]) => p.source !== "C").map(map), design: rows.filter(([, p]) => p.source === "C").map(map) };
+}
+
+/** 算法说明里的例子：头巾，跨境直发，西马，按参考售价卖一单；本土店 600 件的仓储费 */
+export function sourceExamplesOf() {
+  const hijab = getProduct("hijab");
+  const order = settleOrder({ fulfillment: "cross", priceSen: hijab.refPriceSen, weightG: hijab.weightG, region: "west", creatorBp: 0, joinCashback: false }, P);
+  const storage = storageFeeFen(600, 250, hijab, P);
+  return {
+    priceSen: hijab.refPriceSen,
+    order,
+    profitFen: order.payoutFen - hijab.costFen - P.crossForwarderFeeFen.value,
+    costFen: hijab.costFen,
+    forwarderFen: P.crossForwarderFeeFen.value,
+    storage,
+    volumeCm3: hijab.volumeCm3,
+  };
 }

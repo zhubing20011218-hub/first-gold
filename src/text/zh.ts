@@ -433,6 +433,72 @@ export const zh = {
     ignoreNote: (deposit: string, penalty: string): string => `到时候交不出：退定金 ${deposit}，赔 ${penalty}。`,
   },
 
+  /** 数字从哪来 P7 的参数分组和算法说明（任务 08 第一节第 8 条） */
+  source: {
+    real: "来自真实经营",
+    design: "设计值（不代表真实市场）",
+    algoTitle: "这些数怎么算",
+    exampleLabel: "例子",
+    order: {
+      title: "一单的钱",
+      lines: (commission: string, local: string, txn: string, fixed: string, sst: string, localShip: string, crossDays: string, localDays: string): string[] => [
+        `买家付的售价里，平台先扣：佣金 ${commission}（本土店 ${local}）、交易手续费 ${txn}、每单平台支持费 ${fixed}。`,
+        `跨境直发再扣销售税 ${sst} 和按重量算的跨境运费；本土店扣配送费的 ${localShip}。`,
+        `剩下的是平台打款，签收后跨境直发 ${crossDays} 天、本土店 ${localDays} 天到账。`,
+        "打款再减进价和每单的货代费（本土店是贴单费），才是这一单的利润。",
+      ],
+      example: (price: string, fees: string, payout: string, payoutYuan: string, cost: string, fwd: string, profit: string): string =>
+        `头巾跨境直发，卖 ${price}：平台一共扣 ${fees}，打款 ${payout}（${payoutYuan}）；减进价 ${cost}、货代费 ${fwd}，这一单赚 ${profit}。`,
+    },
+    push: {
+      title: "推流分",
+      times: (x: string): string => `${x} 倍`,
+      lines: (base: string, per: string): string[] => [
+        "五项各 0 到 20 分：出单能力、近期发货水平、价格、订单完成率、发货时效，加起来最多 100 分。",
+        "每个月初按上个月的情况重新算。",
+        `平台给的自然流量是 ${base} 加上每分 ${per}，65 分时正好是 1 倍。`,
+      ],
+      example: (x: string): string => `推流分 80 分，自然流量是 65 分时的 ${x} 倍。`,
+    },
+    ads: {
+      title: "广告",
+      lines: (mid: string): string[] => [
+        `拿你的出价和对手的出价比：不到一半拿不到流量，一样多拿到 ${mid}，1.5 倍拿到全部。`,
+        "每次点击按你的出价花钱；每天花的不超过日预算，也不超过手上的现金。",
+        "点击之后，按这种商品的下单率变成订单。",
+      ],
+      example: (mid: string): string => `对手出价 ¥0.40，你也出 ¥0.40，能拿到 ${mid} 的广告点击。`,
+    },
+    bulk: {
+      title: "大单",
+      lines: (rep: string, deposit: string, days: string, penalty: string): string[] => [
+        `报价不高于对手的最低报价就中标；大单信誉每 1 点，报价相当于便宜 ${rep}。`,
+        `中标时收定金（合同金额的 ${deposit}），货要留给他。`,
+        `交货后 ${days} 天收尾款。交不出：退定金，再赔合同金额的 ${penalty}。`,
+      ],
+      example: (deposit: string, penalty: string): string => `合同 ¥1,000.00：中标收定金 ${deposit}；交不出要退 ${deposit}，再赔 ${penalty}。`,
+    },
+    storage: {
+      title: "仓储费（本土店）",
+      lines: (normal: string, aged: string): string[] => [
+        `按货的体积算，每立方米每天 ${normal}。`,
+        `超过上个月销量的那部分算压货，每立方米每天 ${aged}。`,
+        "每个月初扣上个月的。",
+      ],
+      example: (vol: string, fee: string): string => `头巾每件 ${vol} 立方厘米，库存 600 件、上个月卖出 250 件：这个月的仓储费 ${fee}。`,
+    },
+    risk: {
+      title: "风险（本土店）",
+      lines: (start: string, qmin: string, qmax: string, high: string, freeze: string, cost: string, pts: string): string[] => [
+        `成为本土店时风险 ${start}，每个季度自动升高 ${qmin} 到 ${qmax}。`,
+        "缺货超过两成、收到差评、大单违约，风险都会升高。",
+        `到 ${high} 算“高”：季末会被平台审核（货款冻结 ${freeze}），或者被封店。`,
+        `花 ${cost} 做一次合规，风险降低 ${pts}。`,
+      ],
+      example: (high: string, cost: string, after: string): string => `风险到了 ${high}，做一次合规（${cost}），降到 ${after}。`,
+    },
+  },
+
   /** 工作台 P8（docs/09 第四节） */
   desk: {
     title: "工作台",
@@ -476,6 +542,30 @@ export const zh = {
     netWorth: "净资产",
     again: "再来一局",
     retry: "同一局再试一次",
+    save: "保存纪念海报",
+    seed: (seed: string): string => `种子 ${seed}`,
+    /** 四种结局的一句话（docs/07 第 6.4 节） */
+    line: {
+      bankrupt: (): string => "订单不少，但钱回来得太慢。",
+      banned: (): string => "本土店赚得快，也倒得快。",
+      survived: (gap: string): string => `店还在，离第一桶金还差 ${gap}。`,
+      goal: (start: string, end: string): string => `两年，${start} 变成了 ${end}。`,
+    },
+    curve: "两年的现金",
+    low: (day: string, cash: string): string => `最低点：第 ${day} 天 ${cash}`,
+    keyTitle: "最关键的一个决定",
+    key: (q: string): string => `第 ${q} 个季度`,
+    ifThen: (q: string, ref: string, mine: string): string => `如果第 ${q} 个季度用参考做法，净资产会是 ${ref}；你的是 ${mine}。`,
+    noKey: "每个季度换成参考做法，净资产都不变。",
+    totals: "两年的几个总数",
+    retail: "零售发出",
+    lost: "缺货",
+    bulk: "大单交了",
+    ads: "广告一共花了",
+    lowQuarter: "季末现金最低的季度",
+    orders: (n: string): string => `${n} 单`,
+    bulks: (n: string): string => `${n} 张`,
+    quarterName: (q: string): string => `第 ${q} 个季度`,
   },
 
   debug: {

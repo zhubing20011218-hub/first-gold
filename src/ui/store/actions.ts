@@ -255,6 +255,7 @@ export function finishPlay(ui: UiState): UiState {
       { quarter: q, decision: play.decision, plan: play.plan, startCashFen, endCashFen: end.cashFen, startState: play.startState, endState: end },
     ],
     reminderLog: [...ui.reminderLog, ...played],
+    cashCurve: [...ui.cashCurve, ...play.days.map((d) => d.cashAfterFen)],
     playIndex: play.days.length,
     report,
     billConfirmed: false,
@@ -286,6 +287,14 @@ export function nextQuarter(ui: UiState): UiState {
   if (ui.stage !== "settle" || !ui.billConfirmed || !ui.game) return ui;
   if (ui.game.phase !== "running") return { ...ui, stage: "ending", popup: null };
   return { ...enterDecide({ ...ui, play: null, playIndex: 0 }, ui.game, ui.events), billConfirmed: false };
+}
+
+/** 同一局再试一次：用同一个种子回到开局，商品和发货方式照上一局选好（docs/12 第四节） */
+export function retrySameSeed(ui: UiState): UiState {
+  const g = ui.game;
+  let u = startNewGame(ui, ui.seed);
+  if (g) u = pickFulfillment(pickProduct(u, g.config.productId), g.config.fulfillment);
+  return u;
 }
 
 /** 一口气把这个季度放完（大单货不够时用 chooser 选），确认报表，回到做决定或者去结局。测试和 ?demo= 用 */
