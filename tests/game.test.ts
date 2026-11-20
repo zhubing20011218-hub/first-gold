@@ -361,6 +361,9 @@ describe("本土店的风险", () => {
     expect(P.auditFreezeDays.value).toBe(30);
     expect(audit.day % 90).toBe(89);
     expect(audit.frozenUntilDay).toBe(audit.day + 31);
+    // 审核之后风险值降低 25（auditReliefPts）
+    const riskThatDay = r.events.find((e) => e.type === "risk_updated" && e.day === audit.day);
+    expect(riskThatDay && riskThatDay.type === "risk_updated" ? riskThatDay.riskPts - 25 : -1).toBe(audit.riskPts);
     const normalPays = r.events.filter((e) => e.type === "payout_received" && !e.banned);
     // 冻结期间（审核第二天到解冻前一天）一笔都没有到账
     expect(normalPays.filter((e) => e.day > audit.day && e.day < audit.day + 31)).toEqual([]);
