@@ -5,6 +5,9 @@
 @import "@fontsource/barlow-semi-condensed/700.css";
 
 @theme {
+  /* 手机布局和电脑布局的分界：1024（docs/08 第一节，规则包第 14 版）。md: 是电脑布局，max-md: 是手机布局 */
+  --breakpoint-md: 64rem;
+
   --color-*: initial;
   --color-ink: #10212b;
   --color-sea: #0f8f8c;

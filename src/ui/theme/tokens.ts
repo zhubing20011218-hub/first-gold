@@ -106,12 +106,12 @@ export const world = {
   bunting: ["#D8434A", "#F2B632", "#1F9E95"],
   gift: "#D8434A",
   umbrella: ["#F28C28", "#FFFFFF"],
-  /** 四个季节：中国的草地、树的两种颜色、天空、太阳光的颜色和强度 */
+  /** 四个季节：中国的草地、树的两种颜色（冬天是树枝和雪）、天空、太阳光的颜色和强度 */
   season: [
     { grass: "#CFE8AE", tree: ["#F6B7C6", "#F090A8"], sky: "#D5EEF2", sun: "#FFF4E6", sunIntensity: 2.4 },
     { grass: "#A9D98C", tree: ["#3FA36A", "#55B97C"], sky: "#CBEBF5", sun: "#FFE9B8", sunIntensity: 2.8 },
     { grass: "#DCDCA2", tree: ["#E9A23B", "#D9772B"], sky: "#DCEBE6", sun: "#FFD9A8", sunIntensity: 2.2 },
-    { grass: "#F2F6F8", tree: ["#FFFFFF", "#E8EEF2"], sky: "#D9E6EE", sun: "#EEF4FF", sunIntensity: 1.9 },
+    { grass: "#F2F6F8", tree: ["#8A5A35", "#FFFFFF"], sky: "#D9E6EE", sun: "#EEF4FF", sunIntensity: 1.9 },
   ],
   snow: "#FFFFFF",
 } as const;

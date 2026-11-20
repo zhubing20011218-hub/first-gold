@@ -87,3 +87,25 @@ describe("设计变量和文档一样", () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe("设计变量不多也不少", () => {
+  it("theme.css 先清掉 Tailwind 自带的颜色、字号、字体、圆角、影子，只留自己定的（docs/08）", () => {
+    for (const ns of ["color", "text", "font", "radius", "shadow"]) expect(css, ns).toMatch(new RegExp(`--${ns}-\\*:\\s*initial;`));
+  });
+  it("世界的每一个颜色都写在 docs/10 里（第三、四节和第二节的颜色表）", async () => {
+    const { world } = await import("../src/ui/theme/tokens");
+    const text = doc("10-").toLowerCase();
+    const hexes = JSON.stringify(world).match(/#[0-9A-Fa-f]{6}/g) ?? [];
+    expect(hexes.length).toBeGreaterThan(40);
+    expect(hexes.filter((h) => !text.includes(h.toLowerCase()))).toEqual([]);
+  });
+  it("字重只用 400、500、700（docs/07 第二节）：类名里没有 font-black、font-extrabold 这些", () => {
+    const list = (dir: string): string[] =>
+      readdirSync(join(ROOT, dir)).flatMap((n) => {
+        const p = join(ROOT, dir, n);
+        return statSync(p).isDirectory() ? list(relative(ROOT, p)) : /\.(tsx|ts|css)$/.test(n) ? [relative(ROOT, p)] : [];
+      });
+    const bad = list("src/ui").filter((f) => /font-(black|extrabold|semibold|thin|extralight|light)\b|font-weight:\s*(100|200|300|600|800|900)/.test(readFileSync(join(ROOT, f), "utf8")));
+    expect(bad).toEqual([]);
+  });
+});

@@ -15,7 +15,7 @@ export interface CoachMarkProps {
 }
 
 function useNarrow(): boolean {
-  const query = "(max-width: 767px)";
+  const query = "(max-width: 1023px)";
   const [narrow, setNarrow] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
   useEffect(() => {
     const m = window.matchMedia(query);

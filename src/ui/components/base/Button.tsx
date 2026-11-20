@@ -30,7 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         solid && !disabled && "border-ink shadow-solid transition-transform duration-100 active:translate-y-1 active:shadow-none",
         disabled && solid && "border-disabled-text bg-disabled-bg text-disabled-text shadow-none",
         !disabled && variant === "primary" && "bg-gold text-ink hover:brightness-105",
-        !disabled && variant === "confirm" && "bg-sea-text text-paper hover:brightness-110",
+        !disabled && variant === "confirm" && "bg-sea-text text-paper hover:brightness-105",
         !disabled && variant === "normal" && "bg-paper text-ink hover:bg-sea-soft",
         variant === "text" && "rounded-control px-2 text-sea-text underline-offset-4 hover:underline disabled:text-disabled-text",
         look === "hover" && variant === "normal" && "bg-sea-soft",

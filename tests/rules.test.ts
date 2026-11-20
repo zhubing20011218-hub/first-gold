@@ -194,7 +194,11 @@ describe("规则检查", () => {
   });
 
   it("R9 src/ui、src/scene 里没有 Tailwind 的任意值（-[ 和 -(-- 这两种写法，多行的字符串也查）", () => {
-    const hits = findHits(uiLike, /(?:^|[\s"'`])[a-z][a-z0-9:-]*-(?:\[[^\]]*\]|\(--[^)]*\))/, { code: true });
+    // 两种查法一起用：任何 "字母或数字-[" 的写法（包括 !p-[3px]、[&>*]:p-[2px]、group-hover/item:p-[2px]），和 "-(--变量)" 的写法
+    const hits = [
+      ...findHits(uiLike, /[a-z0-9]-\[[^\]]*\]/, { code: true }),
+      ...findHits(uiLike, /[a-z0-9]-\(--[^)]*\)/, { code: true }),
+    ];
     expect(hits, show(hits)).toEqual([]);
   });
 
@@ -214,7 +218,9 @@ describe("规则检查", () => {
 
   it("R6 整个 src 里没有真实平台和聊天软件的名字", () => {
     const names = [
-      "tik\\s*tok",
+      "tik[\\s-]*tok",
+      "carousell",
+      "\\bmudah\\b",
       "zalora",
       "lazmall",
       "抖音",

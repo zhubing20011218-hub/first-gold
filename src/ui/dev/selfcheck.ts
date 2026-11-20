@@ -38,9 +38,9 @@ function textElements(): HTMLElement[] {
   return out;
 }
 
-/** 弹窗打开时只查弹窗里面的东西（docs/11 S1） */
+/** 弹窗（P1 到 P9，Popup 组件带 data-popup）打开时只查弹窗里面的东西；新手提示和解释不算弹窗（docs/11 S1） */
 function scope(): Element {
-  const dialogs = Array.from(document.querySelectorAll("[role='dialog']")).filter(visible);
+  const dialogs = Array.from(document.querySelectorAll("[data-popup]")).filter(visible);
   return dialogs[dialogs.length - 1] ?? document.body;
 }
 
@@ -78,9 +78,9 @@ export function s3(): CheckResult {
 const TAPPABLE =
   "button, input:not([type='hidden']), select, textarea, a[href], [role='button'], [role='radio'], [role='tab'], [role='slider'], [role='checkbox'], [role='switch']";
 
-/** S4 可以点的区域：窗口宽小于 768 时不小于 44 × 44，其他时候不小于 32 × 32 */
+/** S4 可以点的区域：用手机的布局时（窗口宽小于 1024）不小于 44 × 44，其他时候不小于 32 × 32 */
 export function s4(): CheckResult {
-  const min = window.innerWidth < 768 ? 44 : 32;
+  const min = window.innerWidth < 1024 ? 44 : 32;
   const bad = Array.from(document.querySelectorAll(TAPPABLE)).filter((el) => {
     if (!visible(el)) return false;
     const r = el.getBoundingClientRect();
@@ -126,15 +126,24 @@ export function s7(): CheckResult {
     const outY = !c.scrolls && (r.top < b.top - 1 || r.bottom > b.bottom + 1);
     return outX || outY;
   });
-  // 功能区是固定高度的卡片：里面的东西不能伸出内边距（docs/07 第四节）
+  // 功能区：里面的每个元素上下左右都不超出它的上一层，也不超出卡片的内边距（docs/11 S7）
   const spill: string[] = [];
+  const out = (a: DOMRect, b: { left: number; right: number; top: number; bottom: number }): boolean =>
+    a.left < b.left - 1 || a.right > b.right + 1 || a.top < b.top - 1 || a.bottom > b.bottom + 1;
   for (const panel of Array.from(document.querySelectorAll("[data-area]")).filter(visible)) {
     const pr = panel.getBoundingClientRect();
     const st = getComputedStyle(panel);
-    const bottom = pr.bottom - parseFloat(st.borderBottomWidth) - parseFloat(st.paddingBottom);
+    const inner = {
+      left: pr.left + parseFloat(st.borderLeftWidth) + parseFloat(st.paddingLeft),
+      right: pr.right - parseFloat(st.borderRightWidth) - parseFloat(st.paddingRight),
+      top: pr.top + parseFloat(st.borderTopWidth) + parseFloat(st.paddingTop),
+      bottom: pr.bottom - parseFloat(st.borderBottomWidth) - parseFloat(st.paddingBottom),
+    };
     for (const child of Array.from(panel.querySelectorAll("*")).filter(visible)) {
       if (child.closest("[data-reminder]")) continue;
-      if (child.getBoundingClientRect().bottom > bottom + 1) {
+      const r = child.getBoundingClientRect();
+      const parent = child.parentElement;
+      if (out(r, inner) || (parent && parent !== panel && out(r, parent.getBoundingClientRect()))) {
         spill.push(`${describe(panel)} > ${describe(child)}`);
         break;
       }

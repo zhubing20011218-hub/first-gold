@@ -21,6 +21,11 @@
   },
   {
     "page": "gallery",
+    "size": "1024x768",
+    "failures": []
+  },
+  {
+    "page": "gallery",
     "size": "390x844",
     "failures": []
   }
