@@ -90,12 +90,17 @@ export function startQuarter(state: GameState, decision: QuarterDecision, produc
     }
   }
 
-  // 3. 合规
-  if (s.fulfillment === "local" && decision.buyCompliance && s.cashFen >= params.complianceCostFen.value) {
-    s.cashFen -= params.complianceCostFen.value;
-    s.totals.complianceFen += params.complianceCostFen.value;
-    s.riskPts = Math.max(0, s.riskPts - params.compliancePts.value);
-    events.push({ type: "compliance_bought", day, costFen: params.complianceCostFen.value, riskPts: s.riskPts });
+  // 3. 合规：当场付，现金不够就做不成，并发出事件
+  if (s.fulfillment === "local" && decision.buyCompliance) {
+    const cost = params.complianceCostFen.value;
+    if (s.cashFen >= cost) {
+      s.cashFen -= cost;
+      s.totals.complianceFen += cost;
+      s.riskPts = Math.max(0, s.riskPts - params.compliancePts.value);
+      events.push({ type: "compliance_bought", day, costFen: cost, riskPts: s.riskPts });
+    } else {
+      events.push({ type: "compliance_failed", day, needFen: cost, cashFen: s.cashFen });
+    }
   }
 
   // 4. 大单报价，按 bulkQuotes 的顺序

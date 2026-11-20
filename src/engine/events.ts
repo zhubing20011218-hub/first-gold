@@ -29,6 +29,8 @@ export type GameEvent =
   | E<"bulk_paid", { inquiryId: string; amountFen: number }>
   | E<"bulk_defaulted", { inquiryId: string; depositFen: number; penaltyFen: number; bulkRep: number }>
   | E<"compliance_bought", { costFen: number; riskPts: number }>
+  /** 本土店选了做合规，但现金不够，没做成（docs/04 第 10.1 节） */
+  | E<"compliance_failed", { needFen: number; cashFen: number }>
   | E<"upgraded", { feeFen: number; moveFreightFen: number; movedQty: number }>
   | E<"upgrade_failed", { needFen: number; cashFen: number }>
   | E<"risk_updated", { riskPts: number; level: "low" | "mid" | "high" }>

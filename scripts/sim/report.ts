@@ -30,7 +30,10 @@ export interface Row {
   auditedBp: number;
   banQuarterAvg: number | null;
   daysMedian: number;
-  earlyBankruptBp: number;
+  /** 第一个季度结束之前倒闭的局 */
+  firstQuarterBankruptBp: number;
+  /** 平均每局定的广告预算（每天的预算加起来） */
+  adBudgetAvg: number;
 }
 
 function median(xs: number[]): number {
@@ -82,7 +85,8 @@ export function summarize(productId: string, route: Route, strategy: string, rs:
     auditedBp: bp(rs.filter((r) => r.audited).length, rs.length),
     banQuarterAvg: bans.length === 0 ? null : avg(bans),
     daysMedian: median(rs.map((r) => r.days)),
-    earlyBankruptBp: bp(rs.filter((r) => r.bankruptDay !== null && r.bankruptDay < 30).length, rs.length),
+    firstQuarterBankruptBp: bp(rs.filter((r) => r.bankruptDay !== null && r.bankruptDay < 90).length, rs.length),
+    adBudgetAvg: avg(rs.map((r) => r.adBudgetFen)),
   };
 }
 
@@ -112,6 +116,7 @@ export interface ReportInput {
   strategyOrder: string[];
   goalFen: number;
   startCashFen: number;
+  fixedCostFen: number;
   seeds: number;
 }
 
@@ -130,11 +135,11 @@ export function buildReport(input: ReportInput): string {
 
   out.push("## 一、结局和净资产");
   out.push("");
-  out.push("| 组合 | 倒闭 | 被封店 | 活下来了 | 第一桶金 | 第一个月就倒闭 | 净资产 最低 | 中位数 | 最高 | 现金最低点 中位数 | 出现在第几天 | 一局天数 |");
+  out.push("| 组合 | 倒闭 | 被封店 | 活下来了 | 第一桶金 | 第一个季度就倒闭 | 净资产 最低 | 中位数 | 最高 | 现金最低点 中位数 | 出现在第几天 | 一局天数 |");
   out.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const r of rows) {
     out.push(
-      `| ${name(r)} | ${share(r.endings.bankrupt, r.n)} | ${share(r.endings.banned, r.n)} | ${share(r.endings.survived, r.n)} | ${share(r.endings.firstGold, r.n)} | ${pct(r.earlyBankruptBp)} | ${yuan(r.nwMin)} | ${yuan(r.nwMedian)} | ${yuan(r.nwMax)} | ${yuan(r.minCashMedian)} | ${r.minCashDayMedian} | ${r.daysMedian} |`,
+      `| ${name(r)} | ${share(r.endings.bankrupt, r.n)} | ${share(r.endings.banned, r.n)} | ${share(r.endings.survived, r.n)} | ${share(r.endings.firstGold, r.n)} | ${pct(r.firstQuarterBankruptBp)} | ${yuan(r.nwMin)} | ${yuan(r.nwMedian)} | ${yuan(r.nwMax)} | ${yuan(r.minCashMedian)} | ${r.minCashDayMedian} | ${r.daysMedian} |`,
     );
   }
   out.push("");
@@ -146,7 +151,7 @@ export function buildReport(input: ReportInput): string {
   for (const r of rows) {
     const local = r.route !== "cross";
     out.push(
-      `| ${name(r)} | ${f1(r.pushAvg)} | ${f1(r.pushY1)} | ${r.pushY2 === 0 ? "-" : f1(r.pushY2)} | ${yuan(r.adSpendAvg)} | ${r.adSpendAvg === 0 ? "-" : pct(r.adSpendRatioBp)} | ${f0(r.shippedAvg)} | ${f0(r.lostAvg)} | ${f0(r.returnedAvg)} | ${f1(r.bulkWonAvg)} | ${f1(r.bulkDeliveredAvg)} | ${f1(r.bulkDefaultedAvg)} | ${pct(r.bulkShareBp)} | ${local ? yuan(r.storageAvg) : "-"} | ${pct(r.disc5Bp)} | ${pct(r.disc10Bp)} | ${local ? pct(r.auditedBp) : "-"} | ${local && r.banQuarterAvg !== null ? f1(r.banQuarterAvg) : "-"} |`,
+      `| ${name(r)} | ${f1(r.pushAvg)} | ${f1(r.pushY1)} | ${r.pushY2 === 0 ? "-" : f1(r.pushY2)} | ${yuan(r.adSpendAvg)} | ${r.adBudgetAvg === 0 ? "-" : pct(r.adSpendRatioBp)} | ${f0(r.shippedAvg)} | ${f0(r.lostAvg)} | ${f0(r.returnedAvg)} | ${f1(r.bulkWonAvg)} | ${f1(r.bulkDeliveredAvg)} | ${f1(r.bulkDefaultedAvg)} | ${pct(r.bulkShareBp)} | ${local ? yuan(r.storageAvg) : "-"} | ${pct(r.disc5Bp)} | ${pct(r.disc10Bp)} | ${local ? pct(r.auditedBp) : "-"} | ${local && r.banQuarterAvg !== null ? f1(r.banQuarterAvg) : "-"} |`,
     );
   }
   out.push("");
@@ -167,23 +172,25 @@ export function buildReport(input: ReportInput): string {
   return `${out.join("\n")}`;
 }
 
+function listAll(names: string[]): string {
+  return names.length === 0 ? "没有" : names.join("、");
+}
+
 function conclusions(input: ReportInput): string[] {
   const { rows, productNames, strategyNames } = input;
   const name = (r: Row): string => `${productNames[r.productId]}·${ROUTE_NAMES[r.route]}·${strategyNames[r.strategy]}`;
   const dead = (r: Row): number => bp(r.endings.bankrupt + r.endings.banned, r.n);
   const gold = (r: Row): number => bp(r.endings.firstGold, r.n);
+  const banned = (r: Row): number => bp(r.endings.banned, r.n);
   const lines: string[] = [];
 
   // 1. 必输和必赢
   const sureDead = rows.filter((r) => dead(r) >= 9000);
   const sureGold = rows.filter((r) => gold(r) >= 9000);
-  const anyGold = rows.filter((r) => r.endings.firstGold > 0);
   lines.push(
-    `**1. 必输和必赢。** ${rows.length} 个组合里，${sureDead.length} 个几乎一定倒闭或被封店（九成以上），${sureGold.length} 个几乎一定赚到第一桶金（九成以上），只有 ${anyGold.length} 个组合出现过"赚到第一桶金"。` +
-      (sureGold.length > 0 ? `几乎必赢的：${sureGold.slice(0, 8).map(name).join("、")}。` : "") +
-      ` 按打法看，几乎必输的组合数：${input.strategyOrder
-        .map((s) => `${strategyNames[s]} ${sureDead.filter((r) => r.strategy === s).length}`)
-        .join("，")}（每种打法共 18 个组合）。`,
+    `**1. 必输和必赢：有。** ${rows.length} 个组合里，${sureDead.length} 个几乎一定倒闭或被封店（九成以上），${sureGold.length} 个几乎一定赚到第一桶金（九成以上）。` +
+      `几乎必输的按打法分：${input.strategyOrder.map((s) => `${strategyNames[s]} ${sureDead.filter((r) => r.strategy === s).length} 个`).join("，")}。` +
+      `几乎必赢的 ${sureGold.length} 个：${listAll(sureGold.map(name))}。`,
   );
   lines.push("");
 
@@ -191,62 +198,64 @@ function conclusions(input: ReportInput): string[] {
   const byRoute = (route: Route) => rows.filter((r) => r.route === route);
   const routeLine = (route: Route): string => {
     const rs = byRoute(route);
-    const nw = median(rs.map((r) => r.nwMedian));
-    const g = avg(rs.map(gold));
-    const ban = avg(rs.map((r) => bp(r.endings.banned, r.n)));
-    const bk = avg(rs.map((r) => bp(r.endings.bankrupt, r.n)));
-    return `${ROUTE_NAMES[route]}：各组合净资产中位数的中位数 ${yuan(nw)}，平均第一桶金 ${pct(Math.round(g))}，倒闭 ${pct(Math.round(bk))}，被封店 ${pct(Math.round(ban))}`;
+    return `${ROUTE_NAMES[route]}：各组合净资产中位数的中位数 ${yuan(median(rs.map((r) => r.nwMedian)))}，平均第一桶金 ${pct(Math.round(avg(rs.map(gold))))}，被封店 ${pct(Math.round(avg(rs.map(banned))))}`;
   };
-  lines.push(`**2. 三种路线。** ${(["cross", "local", "upgrade"] as Route[]).map(routeLine).join("；")}。`);
-  const crossOk = byRoute("cross").filter((r) => dead(r) < 9000);
-  const localBetter = crossOk.filter((c) => {
-    const l = rows.find((r) => r.route === "local" && r.productId === c.productId && r.strategy === c.strategy);
-    return l !== undefined && l.nwMedian > c.nwMedian;
-  }).length;
+  const pairs = byRoute("cross")
+    .filter((c) => dead(c) < 9000)
+    .map((c) => ({ c, l: rows.find((r) => r.route === "local" && r.productId === c.productId && r.strategy === c.strategy) }))
+    .filter((p): p is { c: Row; l: Row } => p.l !== undefined);
+  const localMore = pairs.filter((p) => p.l.nwMedian > p.c.nwMedian).length;
+  const localRiskier = avg(byRoute("local").map(banned)) > avg(byRoute("cross").map(banned));
+  const holds = localMore * 2 > pairs.length && localRiskier;
   lines.push(
-    `在跨境店没有几乎必输的 ${crossOk.length} 个组合里，同样的商品和打法换成一直本土，净资产中位数更高的有 ${localBetter} 个。"本土店长期赚得更多、但风险更高"是否成立，看这个数和上面的被封店比例。`,
+    `**2. 三种路线：本土店"长期赚得更多、但风险更高"${holds ? "成立" : "不成立"}。** ${(["cross", "local", "upgrade"] as Route[]).map(routeLine).join("；")}。` +
+      `跨境店不是几乎必输的 ${pairs.length} 个组合里，换成一直本土、净资产中位数更高的有 ${localMore} 个；被封店只发生在本土店和升级之后。`,
   );
   lines.push("");
 
   // 3. 零售和大单
+  const bulkShare = avg(rows.map((r) => r.bulkShareBp));
   const bulkOnly = rows.filter((r) => r.strategy === "bulkOnly");
   const retailOnly = rows.filter((r) => r.strategy === "conservative");
+  const oneLineWins = [...bulkOnly, ...retailOnly].filter((r) => gold(r) >= 9000);
   lines.push(
-    `**3. 零售和大单。** 所有组合的大单收入占比平均 ${pct(Math.round(avg(rows.map((r) => r.bulkShareBp))))}。只做大单的 18 个组合，平均第一桶金 ${pct(Math.round(avg(bulkOnly.map(gold))))}，倒闭或被封店 ${pct(Math.round(avg(bulkOnly.map(dead))))}，平均每局中标 ${f1(avg(bulkOnly.map((r) => r.bulkWonAvg)))} 张、违约 ${f1(avg(bulkOnly.map((r) => r.bulkDefaultedAvg)))} 张。不做大单的保守打法，平均第一桶金 ${pct(Math.round(avg(retailOnly.map(gold))))}，倒闭或被封店 ${pct(Math.round(avg(retailOnly.map(dead))))}。` +
-      ` 只做一条线就能稳赢（九成以上）的组合：${[...bulkOnly, ...retailOnly].filter((r) => gold(r) >= 9000).map(name).join("、") || "没有"}。`,
+    `**3. 零售和大单：${bulkShare < 5000 ? "零售更赚钱" : "大单更赚钱"}。** 所有组合里，大单的收入（收到的定金和尾款，减去违约退回的定金）平均只占总收入的 ${pct(Math.round(bulkShare))}。` +
+      `只做大单的 18 个组合，平均第一桶金 ${pct(Math.round(avg(bulkOnly.map(gold))))}，倒闭或被封店 ${pct(Math.round(avg(bulkOnly.map(dead))))}，平均每局中标 ${f1(avg(bulkOnly.map((r) => r.bulkWonAvg)))} 张、违约 ${f1(avg(bulkOnly.map((r) => r.bulkDefaultedAvg)))} 张；不做大单的保守打法，平均第一桶金 ${pct(Math.round(avg(retailOnly.map(gold))))}。` +
+      `只做一条线就能稳赢（九成以上）的 ${oneLineWins.length} 个：${listAll(oneLineWins.map(name))}。`,
   );
   lines.push("");
 
-  // 4. 建议
-  const early = avg(rows.map((r) => r.earlyBankruptBp));
-  const allDead = avg(rows.map(dead));
-  const adRatio = avg(rows.filter((r) => r.adSpendAvg > 0).map((r) => r.adSpendRatioBp));
+  // 4. 有没有一种打法在所有商品上都稳赢
+  const winners: string[] = [];
+  for (const sid of input.strategyOrder) {
+    for (const route of ["cross", "local", "upgrade"] as Route[]) {
+      const rs = rows.filter((r) => r.strategy === sid && r.route === route);
+      if (rs.length > 0 && rs.every((r) => gold(r) >= 9000)) winners.push(`${strategyNames[sid]}·${ROUTE_NAMES[route]}`);
+    }
+  }
+  lines.push(
+    `**4. 有没有一种打法在所有商品上都稳赢：${winners.length > 0 ? "有" : "没有"}。** ` +
+      (winners.length > 0 ? `在 6 种商品上都九成以上赚到第一桶金的：${listAll(winners)}。这不符合"没有必赢的打法"。` : "没有一种打法加路线在 6 种商品上都九成以上赚到第一桶金。"),
+  );
+  lines.push("");
+
+  // 5. 建议
   const sugg: string[] = [];
-  if (early >= 1000) {
-    sugg.push(
-      `平均 ${pct(Math.round(early))} 的局在第一个月就倒闭。主要原因是自动补货按"买得起的最大件数"进货，把现金花光，当天的每单费用和下个月的固定开支一扣就成了负数（文档问题 D15）。建议补货时给现金留一个底，例如留出一个月的固定开支，或者"买得起"只算现金的一部分`,
-    );
-  }
-  if (allDead >= 5000) {
-    sugg.push(`全部组合平均 ${pct(Math.round(allDead))} 的局倒闭或被封店，整体偏难。可以考虑提高启动资金、降低每月固定开支（现在 ¥300），或者缩短回款天数`);
-  }
-  if (anyGold.length < rows.length / 3) {
-    sugg.push(`只有 ${anyGold.length} 个组合出现过"赚到第一桶金"，目标 ${yuan(input.goalFen)} 对多数商品和打法太高，可以降低目标或提高每单利润`);
-  }
   for (const sid of input.strategyOrder) {
     const rs = rows.filter((r) => r.strategy === sid);
     const g = avg(rs.map(gold));
     const dd = avg(rs.map(dead));
     if (g >= 7000) {
-      sugg.push(`"${strategyNames[sid]}"打法平均 ${pct(Math.round(g))} 的局赚到第一桶金，太容易。可以提高目标净资产（现在 ${yuan(input.goalFen)}），或者降低每单利润、提高固定开支`);
+      sugg.push(`"${strategyNames[sid]}"打法平均 ${pct(Math.round(g))} 的局赚到第一桶金，太容易。可以提高目标净资产（现在 ${yuan(input.goalFen)}），或者降低每单利润、提高每月固定开支（现在 ${yuan(input.fixedCostFen)}）`);
     }
-    if (dd >= 9000) {
-      sugg.push(`"${strategyNames[sid]}"打法平均 ${pct(Math.round(dd))} 的局倒闭或被封店，这是这种打法把钱花过了头，季末付不起`);
-    }
+    if (dd >= 9000) sugg.push(`"${strategyNames[sid]}"打法平均 ${pct(Math.round(dd))} 的局倒闭或被封店，这是这种打法把钱花过了头，季末付不起`);
   }
-  if (adRatio > 0) sugg.push(`投了广告的组合，实际花掉的平均只占预算的 ${pct(Math.round(adRatio))}，广告的点击池和对手出价可以再看一看`);
+  const withBudget = rows.filter((r) => r.adBudgetAvg > 0);
+  if (withBudget.length > 0) {
+    sugg.push(`定了广告预算的 ${withBudget.length} 个组合，实际花掉的平均只占预算的 ${pct(Math.round(avg(withBudget.map((r) => r.adSpendRatioBp))))}（现金是负数时广告花不出去，这些也算在里面），广告的点击池和对手出价可以再看一看`);
+  }
   const ties = input.sandbox.reduce((s, x) => s + x.seedsWithTies, 0);
   if (ties > 0) sugg.push(`沙盘检查里有 ${ties} 个种子出现了不同打法结果相同，多半是这些打法都在同一天倒闭`);
-  lines.push(`**4. 最需要调整的数值（只是建议，没有改任何数值）。** ${sugg.map((s, i) => `（${i + 1}）${s}。`).join("")}`);
+  lines.push(`**5. 最需要调整的数值（只是建议，没有改任何数值）。** ${sugg.map((x, i) => `（${i + 1}）${x}。`).join("")}`);
   return lines;
 }

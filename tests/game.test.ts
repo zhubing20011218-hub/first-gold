@@ -150,6 +150,19 @@ describe("startQuarter", () => {
     expect(r.state.cashFen).toBe(state.cashFen);
     expect(r.events[0]).toMatchObject({ type: "upgrade_failed" });
   });
+  it("本土店选了做合规，现金不够时没做成，并有 compliance_failed 事件；现金够时做成", () => {
+    const { state } = newGame("local", 300);
+    const poor: GameState = { ...state, cashFen: 59999, riskPts: 50 };
+    const r = startQuarter(poor, decision({ buyCompliance: true }), hijab, P);
+    expect(r.events).toEqual([{ type: "compliance_failed", day: 0, needFen: 60000, cashFen: 59999 }]);
+    expect(r.state.cashFen).toBe(59999);
+    expect(r.state.riskPts).toBe(50);
+    const ok = startQuarter({ ...poor, cashFen: 60000 }, decision({ buyCompliance: true }), hijab, P);
+    expect(ok.events).toEqual([{ type: "compliance_bought", day: 0, costFen: 60000, riskPts: 30 }]);
+    expect(ok.state.cashFen).toBe(0);
+    // 跨境直发选了做合规：什么都不发生
+    expect(startQuarter(newGame("cross").state, decision({ buyCompliance: true }), hijab, P).events).toEqual([]);
+  });
   it("不修改传进来的状态", () => {
     const { state } = newGame("cross");
     deepFreeze(state);

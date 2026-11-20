@@ -31,7 +31,9 @@ export interface GameResult {
   bulkWon: number;
   bulkDelivered: number;
   bulkDefaulted: number;
+  /** 大单的收入：收到的定金和尾款，减去违约时退回的定金（任务 04） */
   bulkIncomeFen: number;
+  bulkRefundFen: number;
   retailIncomeFen: number;
   storageFen: number;
   restocks: number;
@@ -69,6 +71,7 @@ export function playWithStrategy(product: Product, params: Params, strategy: Str
     bulkDelivered: 0,
     bulkDefaulted: 0,
     bulkIncomeFen: 0,
+    bulkRefundFen: 0,
     retailIncomeFen: 0,
     storageFen: 0,
     restocks: 0,
@@ -110,6 +113,9 @@ export function playWithStrategy(product: Product, params: Params, strategy: Str
           break;
         case "banned":
           r.banQuarter = q + 1;
+          break;
+        case "bulk_defaulted":
+          r.bulkRefundFen += e.depositFen;
           break;
         case "bankrupt":
           r.bankruptDay = e.day;
@@ -172,7 +178,7 @@ export function playWithStrategy(product: Product, params: Params, strategy: Str
   r.bulkWon = t.bulkWon;
   r.bulkDelivered = t.bulkDelivered;
   r.bulkDefaulted = t.bulkDefaulted;
-  r.bulkIncomeFen = t.bulkInFen;
+  r.bulkIncomeFen = t.bulkInFen - r.bulkRefundFen;
   r.retailIncomeFen = t.payoutFen;
   r.storageFen = t.storageFen;
   r.days = state.day;

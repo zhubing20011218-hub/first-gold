@@ -62,6 +62,7 @@ async function main(): Promise<void> {
     strategyOrder: [...STRATEGIES],
     goalFen: malaysia.goalNetWorthFen.value,
     startCashFen: malaysia.startCashFen.value,
+    fixedCostFen: malaysia.monthlyFixedCostFen.value,
     seeds: SEEDS,
   });
   writeFileSync(process.env.SIM_OUT ?? "模拟报告.md", report);

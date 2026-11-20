@@ -93,7 +93,7 @@ function show(hits: Hit[]): string {
 }
 
 const engineFiles = listFiles("src/engine");
-const staffFiles = listFiles("src/staff");
+const planFiles = listFiles("src/plan");
 const allSrc = listFiles("src");
 const uiLike = [...listFiles("src/ui"), ...listFiles("src/scene")];
 
@@ -126,18 +126,18 @@ describe("规则检查", () => {
     expect(listFiles("src/params").length).toBeGreaterThan(0);
   });
 
-  it("R1 src/engine、src/staff 里没有 Math.random、Date.now、new Date", () => {
-    const hits = findHits([...engineFiles, ...staffFiles], /Math\.random|Date\.now|new\s+Date\b/, { code: true });
+  it("R1 src/engine、src/plan 里没有 Math.random、Date.now、new Date", () => {
+    const hits = findHits([...engineFiles, ...planFiles], /Math\.random|Date\.now|new\s+Date\b/, { code: true });
     expect(hits, show(hits)).toEqual([]);
   });
 
-  it("R2 src/engine 不引用 ui、scene、staff、text、react", () => {
-    const hits = badImports(engineFiles, /(^|\/)(ui|scene|staff|text)(\/|$)|^react($|-|\/)/);
+  it("R2 src/engine 不引用 ui、scene、plan、text、react", () => {
+    const hits = badImports(engineFiles, /(^|\/)(ui|scene|plan|text)(\/|$)|^react($|-|\/)/);
     expect(hits, show(hits)).toEqual([]);
   });
 
-  it("R2 src/staff 不引用 ui、scene、text、react", () => {
-    const hits = badImports(staffFiles, /(^|\/)(ui|scene|text)(\/|$)|^react($|-|\/)/);
+  it("R2 src/plan 不引用 ui、scene、text、react", () => {
+    const hits = badImports(planFiles, /(^|\/)(ui|scene|text)(\/|$)|^react($|-|\/)/);
     expect(hits, show(hits)).toEqual([]);
   });
 
@@ -155,8 +155,8 @@ describe("规则检查", () => {
     expect(hits, show(hits)).toEqual([]);
   });
 
-  it("R5 src/ui、src/scene、src/engine、src/staff 的代码里没有中文（注释里可以有）", () => {
-    const hits = findHits([...uiLike, ...engineFiles, ...staffFiles], /[㐀-鿿＀-￯　-〿]/, {
+  it("R5 src/ui、src/scene、src/engine、src/plan 的代码里没有中文（注释里可以有）", () => {
+    const hits = findHits([...uiLike, ...engineFiles, ...planFiles], /[㐀-鿿＀-￯　-〿]/, {
       code: true,
     });
     expect(hits, show(hits)).toEqual([]);
@@ -209,7 +209,8 @@ describe("规则检查", () => {
   it("模拟脚本只引用 engine、params、products（任务 04）", () => {
     const files = [...listFiles("scripts/sim"), "scripts/simulate.ts"].filter((f) => f.endsWith(".ts"));
     expect(files.length).toBeGreaterThan(1);
-    const hits = badImports(files, /(^|\/)src\/(ui|scene|text|plan)(\/|$)|^react($|-|\/)/);
+    // 只允许 node: 开头的内置模块、同一个文件夹里的文件、src/engine、src/params、src/products
+    const hits = badImports(files, /^(?!node:|\.\/|(\.\.\/)+src\/(engine|params|products)\/)/);
     expect(hits, show(hits)).toEqual([]);
   });
 
