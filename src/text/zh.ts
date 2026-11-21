@@ -392,8 +392,11 @@ export const zh = {
     mismatch: "这个季度的账对不上。",
     planVsActual: (plan: string, actual: string, adsMax: string, ads: string, worst: string, end: string): string =>
       `预计花掉 ${plan}，实际 ${actual}；广告最多 ${adsMax}，实际 ${ads}；最坏的季末 ${worst}，实际 ${end}。`,
-    sections: { money: "收入和支出", check: "核对", plan: "计划和实际", carry: "带到下个季度的", result: "这个季度的结果", why: "为什么", verdict: "结论" } as Record<string, string>,
-    carry: { stock: "库存", goods: "路上的货", money: "路上的货款", bulk: "没交完的大单" } as Record<string, string>,
+    sections: { money: "收入和支出", check: "核对", plan: "计划和实际", carry: "带到下个季度的", closing: "收尾", result: "这个季度的结果", why: "为什么", verdict: "结论" } as Record<string, string>,
+    carry: { reserved: "留给大单的货", goods: "路上的货", money: "路上的货款", bulk: "没交完的大单" } as Record<string, string>,
+    frozenUntil: (day: string): string => `冻结到第 ${day} 天`,
+    closing: (days: string, income: string, count: string): string => `第 8 个季度结束后又等了 ${days} 天，等货款和大单尾款到账：收到 ${income}，共 ${count} 笔，已算进上面的账里。`,
+    closingNone: "第 8 个季度结束时，钱都已经到账，不用再等。",
     result: (shipped: string, lost: string, won: string, delivered: string, push: string, delta: string): string =>
       `零售发出 ${shipped} 单，缺货 ${lost} 单；大单中了 ${won} 张，交了 ${delivered} 张；推流分 ${push}（${delta}）。`,
     continue: (end: string): string => `季末现金 ${end}，付得起。确认之后进入下一个季度。`,

@@ -291,6 +291,17 @@ export function billTotalsOf(report: QuarterReport): { incomeFen: number; expens
   return { incomeFen, expenseFen, count: report.bills.length };
 }
 
+/** 第 8 个季度报表里的"收尾"一段（docs/09 第一节）：季度结束后又等了几天，那几天到账的钱。不是第 8 个季度就是 null */
+export function closingOf(report: QuarterReport, game: GameState): { days: number; incomeFen: number; count: number } | null {
+  if (report.quarter !== 7) return null;
+  const after = report.bills.filter((b) => b.day >= 720);
+  return {
+    days: Math.max(0, game.day - 720),
+    incomeFen: after.filter((b) => b.amountFen > 0).reduce((s, b) => s + b.amountFen, 0),
+    count: after.length,
+  };
+}
+
 export function reportOf(ui: UiState): QuarterReport | null {
   return ui.report;
 }
@@ -325,7 +336,13 @@ export function deskOf(ui: UiState) {
   const g = ui.game;
   if (!g) return null;
   const product = getProduct(g.config.productId);
-  const q = Math.floor(Math.min(g.day, 719) / 90);
+  // 结算和结局时，模型已经走到了下一个季度的第一天；工作台要看的还是刚算完的那个季度
+  const q =
+    (ui.stage === "settle" || ui.stage === "ending") && ui.report
+      ? ui.report.quarter
+      : ui.stage === "play" && ui.play
+        ? ui.play.quarter
+        : Math.floor(Math.min(g.day, 719) / 90);
   const events = eventsSoFar(ui);
   const inQ = events.filter((e) => Math.floor(e.day / 90) === q || (q === 7 && e.day >= 720));
   const ref = referenceNumbers(g, product, P);

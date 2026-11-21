@@ -7,7 +7,7 @@ import { Stamp } from "../components/base/Stamp";
 import { MoneyText } from "../components/base/MoneyText";
 import { AreaIcon } from "../components/biz/AreaIcon";
 import { useStore } from "../store/store";
-import { billGroupsOf, billLabel, billTotalsOf, reportOf, formatYuan, type Bill, type Cause } from "../store/selectors";
+import { billGroupsOf, billLabel, billTotalsOf, closingOf, reportOf, formatYuan, type Bill, type Cause } from "../store/selectors";
 import { zh } from "../../text/zh";
 
 /** "为什么"的一句话：数字里以 Fen 结尾的是钱，pctBp 是百分比 */
@@ -46,6 +46,7 @@ export function BillPopup() {
   const year = zh.timeline.year[Math.floor(r.quarter / 4)] ?? zh.timeline.year[1];
   const quarter = zh.timeline.quarter[r.quarter % 4];
   const bankrupt = r.verdict === "bankrupt";
+  const closing = closingOf(r, ui.game);
   const carryGoods = r.carry.restockInTransit.reduce((s, x) => s + x.qty, 0);
   const footer =
     r.verdict === "continue" ? (
@@ -127,8 +128,8 @@ export function BillPopup() {
         <Section title={b.sections.carry}>
           <dl className="grid grid-cols-4 gap-2 text-body max-md:grid-cols-2">
             <div>
-              <dt className="text-cap text-muted">{b.carry.stock}</dt>
-              <dd className="num font-bold">{`${ui.game.stockQty.toLocaleString("en-US")} ${zh.status.piece}`}</dd>
+              <dt className="text-cap text-muted">{b.carry.reserved}</dt>
+              <dd className="num font-bold">{`${r.carry.reservedQty.toLocaleString("en-US")} ${zh.status.piece}`}</dd>
             </div>
             <div>
               <dt className="text-cap text-muted">{b.carry.goods}</dt>
@@ -139,6 +140,9 @@ export function BillPopup() {
               <dd className="num font-bold">
                 <MoneyText kind="yuan" amount={r.carry.payoutInTransit.amountFen} />
               </dd>
+              {r.carry.payoutInTransit.frozenUntilDay !== null && (
+                <dd className="text-cap font-bold text-hibiscus-text">{b.frozenUntil(String(r.carry.payoutInTransit.frozenUntilDay + 1))}</dd>
+              )}
             </div>
             <div>
               <dt className="text-cap text-muted">{b.carry.bulk}</dt>
@@ -146,6 +150,13 @@ export function BillPopup() {
             </div>
           </dl>
         </Section>
+        {closing && (
+          <Section title={b.sections.closing}>
+            <p className="text-body">
+              {closing.count > 0 ? b.closing(String(closing.days), formatYuan(closing.incomeFen), String(closing.count)) : b.closingNone}
+            </p>
+          </Section>
+        )}
         <Section title={b.sections.result}>
           <p className="text-body">
             {b.result(

@@ -212,8 +212,15 @@ export function answerBulkShort(ui: UiState, choice: MidChoice): UiState {
   const last = days[days.length - 1];
   days[days.length - 1] = { ...last, events: [...last.events, ...r.events], cashAfterFen: r.state.cashFen, state: r.state };
   const more = runUntilStop(r.state, play.quarter);
+  // 停下的那一天还没算完：接着算的第一天和停下的是同一天，合成一天，不然现金曲线会多出一天
+  const rest = more.days;
+  if (rest.length > 0 && rest[0].day === days[days.length - 1].day) {
+    const merged = days[days.length - 1];
+    days[days.length - 1] = { ...rest[0], events: [...merged.events, ...rest[0].events] };
+    rest.shift();
+  }
   const decision = { ...play.decision, bulkShortChoices: [...(play.decision.bulkShortChoices ?? []), { inquiryId: g.pending.inquiryId, choice }] };
-  return { ...ui, popup: null, game: r.state, play: { ...play, decision, days: [...days, ...more.days], stoppedAt: more.stoppedAt } };
+  return { ...ui, popup: null, game: r.state, play: { ...play, decision, days: [...days, ...rest], stoppedAt: more.stoppedAt } };
 }
 
 /** 播放结束：算这个季度的报表，去结算，打开季度报表（docs/06 第五节） */
