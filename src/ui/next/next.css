@@ -1,0 +1,49 @@
+/* 新版界面的字体和动画。颜色只在 tokens.ts 里。 */
+@import "@fontsource/fredoka/500.css";
+@import "@fontsource/fredoka/600.css";
+@import "@fontsource/fredoka/700.css";
+@import "@fontsource/zcool-kuaile/400.css";
+
+.nx-press { transition: transform 0.1s ease; }
+.nx-press:active:not(:disabled) { transform: translateY(3px); }
+.nx-press:hover:not(:disabled) { filter: brightness(1.04); }
+
+@keyframes nx-flick { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+.nx-flick { animation: nx-flick 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+
+@keyframes nx-pop { 0% { transform: scale(0.85); opacity: 0; } 70% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+.nx-pop { animation: nx-pop 0.35s ease-out both; }
+
+@keyframes nx-rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
+.nx-rise { animation: nx-rise 1.1s ease-out forwards; }
+
+@keyframes nx-ring { 0% { box-shadow: 0 0 0 0 var(--nx-ring); } 100% { box-shadow: 0 0 0 16px transparent; } }
+.nx-ring { animation: nx-ring 1.4s ease-out infinite; }
+
+@keyframes nx-flow { to { stroke-dashoffset: -48; } }
+.nx-flow { animation: nx-flow 1.2s linear infinite; }
+
+@keyframes nx-draw { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
+.nx-draw { stroke-dasharray: 400; animation: nx-draw 0.9s ease-out both; }
+
+@keyframes nx-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.nx-bob { animation: nx-bob 1.6s ease-in-out infinite; }
+
+@keyframes nx-fall { 0% { transform: translateY(-40px) rotate(0); } 100% { transform: translateY(1000px) rotate(540deg); } }
+.nx-fall { animation: nx-fall 6s linear infinite; }
+
+@keyframes nx-grow { from { transform: scale(0); } to { transform: scale(1); } }
+.nx-grow { animation: nx-grow 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+
+@keyframes nx-bar { from { width: 0; } }
+.nx-bar { animation: nx-bar 0.9s ease-out both; }
+
+@keyframes nx-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+.nx-shake { animation: nx-shake 0.25s ease-in-out; }
+
+@keyframes nx-drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(14px); } }
+.nx-drift { animation: nx-drift 7s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-flick, .nx-flow, .nx-bob, .nx-fall, .nx-ring, .nx-drift { animation: none; }
+}

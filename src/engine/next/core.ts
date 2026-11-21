@@ -1,5 +1,6 @@
 // 新版共用的小函数：空统计、库存、热度、店铺综合分、净资产、店铺等级
 import { applyBp } from "../money";
+import { priceFactorBp } from "../market";
 import type { Product } from "../product";
 import { pushBpOf } from "../push";
 import { clamp } from "../util";
@@ -209,4 +210,14 @@ export function shopLevel(netWorth: number, params: Params): number {
 /** 结局用的净资产：剩下的货按进价的 stockSalvageBp 算（卖不掉的货不值原价） */
 export function finalNetWorthFen(state: GameState, world: World): number {
   return state.cashFen + applyBp(stockValueFen(state, world), world.params.stockSalvageBp.value) + receivableFen(state) - state.loanFen;
+}
+
+/** 对手这一季的零售价 */
+export function rivalPriceOf(state: GameState, quarter: number, product: Product): number {
+  return state.schedule.rivalPriceSen[quarter]?.[product.id] ?? product.refPriceSen;
+}
+
+/** 价格系数：和对手的价比（便宜就多卖） */
+export function priceFactorVsRival(state: GameState, quarter: number, priceSen: number, product: Product, params: Params): number {
+  return priceFactorBp(priceSen, { ...product, refPriceSen: rivalPriceOf(state, quarter, product) }, params);
 }

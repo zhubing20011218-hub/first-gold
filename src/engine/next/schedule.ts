@@ -43,6 +43,15 @@ export function buildSchedule(seed: number, world: World): Schedule {
     trendBp.push(t);
     hotOf.push(ids[hot]);
   }
+  const rivalPriceSen: Record<string, number>[] = [];
+  for (let q = 0; q < QUARTERS; q++) {
+    const t: Record<string, number> = {};
+    for (const p of products) {
+      const raw = applyBp(p.refPriceSen, rng.int(params.rivalPriceMinBp.value, params.rivalPriceMaxBp.value));
+      t[p.id] = Math.min(p.maxPriceSen, Math.max(p.minPriceSen, Math.round(raw / 10) * 10));
+    }
+    rivalPriceSen.push(t);
+  }
   const surpriseBp: Record<string, number>[] = [];
   for (let q = 0; q < QUARTERS; q++) {
     const t: Record<string, number> = {};
@@ -150,6 +159,7 @@ export function buildSchedule(seed: number, world: World): Schedule {
 
   return {
     trendBp,
+    rivalPriceSen,
     surpriseBp,
     inquiries,
     inquiryCount,

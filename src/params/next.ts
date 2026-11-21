@@ -33,6 +33,8 @@ export const nextOnly = {
   adPoolScaleBp: c(48000, "bp", "广告点击量的规模，相对商品库里的基础点击量"),
   supplierCapScaleBp: c(80000, "bp", "供应商每季度最多供多少，相对商品库里每月上限的倍数（已经乘了 3 个月以外再乘这个）"),
   trendHotBp: c(16000, "bp", "每季度有一种货特别火，热度乘这个"),
+  rivalPriceMinBp: c(9500, "bp", "对手零售价最低是参考价的几成"),
+  rivalPriceMaxBp: c(10800, "bp", "对手零售价最高是参考价的几成"),
   surpriseMinBp: c(6000, "bp", "每季每种货还有一个事先看不到的波动，最低"),
   surpriseMaxBp: c(13000, "bp", "每季每种货事先看不到的波动，最高"),
   trendColdBp: c(7000, "bp", "每季度有一种货变冷，热度乘这个"),

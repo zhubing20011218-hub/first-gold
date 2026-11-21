@@ -115,3 +115,79 @@ export const world = {
   ],
   snow: "#FFFFFF",
 } as const;
+
+/**
+ * 新版（改版方案第 5 稿）的颜色：卡通、可爱、浅色。新界面 src/ui/next 只用这一组。
+ * 和示意图第 5 张"画风板"一样。
+ */
+export const nc = {
+  cream: "#FFF8EC",
+  paper: "#FFFFFF",
+  ink: "#3B3355",
+  inkSoft: "#4F4868",
+  muted: "#6B6385",
+  faint: "#8A84A0",
+  line: "#E4DCEF",
+  mist: "#F3EEF8",
+  mistDeep: "#F7F3FC",
+  ghost: "#CDBFE3",
+  ghostDeep: "#C9B8EA",
+  gold: "#FFC93C",
+  goldDeep: "#F2A900",
+  goldText: "#B26B00",
+  goldSoft: "#FFF6D6",
+  butter: "#FFF1C9",
+  sun: "#FFE59A",
+  mint: "#5ED3A0",
+  mintDeep: "#2FAF7C",
+  mintText: "#1F8A5F",
+  mintSoft: "#EAFBF2",
+  mintPale: "#B5E8C8",
+  sky: "#7BA8FF",
+  skySoft: "#EAF1FF",
+  sea: "#BFE8F8",
+  orange: "#FF9F5A",
+  orangeSoft: "#FFF2E8",
+  orangeText: "#B24A00",
+  coral: "#FF7B6B",
+  coralSoft: "#FFF0EE",
+  coralPale: "#FFC2B8",
+  coralText: "#A8322B",
+  red: "#C2413B",
+  lavender: "#C7B8FF",
+  lavenderSoft: "#F4F0FF",
+  slate: "#9C95B5",
+  peach: "#FFB8A1",
+  skin: "#FFE3CF",
+  blush: "#FFB0A3",
+  shade: "#3B335566",
+} as const;
+
+/** 新版每种货的颜色（现金分配条、每种货赚了多少） */
+export const productColor: Record<string, string> = {
+  phone_case: nc.sky,
+  arm_sleeve: nc.mint,
+  hijab: nc.lavender,
+  mini_fan: nc.orange,
+  blouse: nc.coral,
+  earbuds: nc.gold,
+};
+
+/** 新版每种货卡片的底色 */
+export const productTint: Record<string, string> = {
+  phone_case: nc.skySoft,
+  arm_sleeve: nc.mintSoft,
+  hijab: nc.lavenderSoft,
+  mini_fan: nc.orangeSoft,
+  blouse: nc.coralSoft,
+  earbuds: nc.goldSoft,
+};
+
+/** 三家对手的脸色 */
+export const rivalColor = [nc.peach, nc.mintPale, nc.lavender] as const;
+
+export const font = {
+  title: "'ZCOOL KuaiLe', 'PingFang SC', sans-serif",
+  body: "'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
+  num: "'Fredoka', 'PingFang SC', sans-serif",
+} as const;

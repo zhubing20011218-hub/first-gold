@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="560" viewBox="0 0 880 560">
+<style>
+
+@keyframes wbob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-5px) rotate(1deg)}}
+@keyframes wpuff{0%{opacity:.9;transform:translate(0,0) scale(.6)}100%{opacity:0;transform:translate(6px,-26px) scale(1.4)}}
+@keyframes wflow{to{stroke-dashoffset:-40}}
+@keyframes wspin{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.3)}}
+@keyframes whop{0%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+.wbob{animation:wbob 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.wpuff{animation:wpuff 2s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.wpuff2{animation:wpuff 2s ease-out .7s infinite;transform-box:fill-box;transform-origin:center}
+.wflow{animation:wflow 1.4s linear infinite}
+.wspin{animation:wspin 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.whop{animation:whop 1.1s ease-in-out infinite;transform-box:fill-box}
+</style>
+    <!-- 天和海 -->
+    <rect x="0" y="0" width="880" height="150" fill="#EAF8FF"></rect>
+    <path d="M0 150 C120 140 220 160 330 150 C450 140 560 162 680 150 C770 142 830 152 880 148 V560 H0 Z" fill="#BFE8F8"></path>
+    <circle cx="790" cy="62" r="30" fill="#FFE08A" stroke="#3B3355" stroke-width="3"></circle>
+    <g fill="#FFFFFF" stroke="#D9E9F2" stroke-width="2">
+      <path d="M90 70 a16 16 0 0 1 27 -10 a20 20 0 0 1 36 5 a14 14 0 0 1 4 27 h-63 a12 12 0 0 1 -4 -22 z"></path>
+      <path d="M520 46 a12 12 0 0 1 20 -8 a15 15 0 0 1 27 4 a11 11 0 0 1 3 20 h-47 a9 9 0 0 1 -3 -16 z"></path>
+    </g>
+    <g stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9">
+      <path d="M60 470 q10 -6 20 0 t20 0"></path>
+      <path d="M200 520 q10 -6 20 0 t20 0"></path>
+      <path d="M470 510 q10 -6 20 0 t20 0"></path>
+      <path d="M760 500 q10 -6 20 0 t20 0"></path>
+      <path d="M440 200 q10 -6 20 0 t20 0"></path>
+    </g>
+
+    <!-- 义乌的小岛 -->
+    <path d="M70 290 L250 200 L430 290 L250 380 Z" fill="#FFEFD0" stroke="#3B3355" stroke-width="3" stroke-linejoin="round"></path>
+    <path d="M70 290 L250 380 L250 400 L70 310 Z" fill="#F3D9A8" stroke="#3B3355" stroke-width="3" stroke-linejoin="round"></path>
+    <path d="M250 380 L430 290 L430 310 L250 400 Z" fill="#E9C98E" stroke="#3B3355" stroke-width="3" stroke-linejoin="round"></path>
+    <!-- 吉隆坡的小岛 -->
+    <path d="M430 350 L630 250 L830 350 L630 450 Z" fill="#D4F5E1" stroke="#3B3355" stroke-width="3" stroke-linejoin="round"></path>
+    <path d="M430 350 L630 450 L630 472 L430 372 Z" fill="#F3D9A8" stroke="#3B3355" stroke-width="3" stroke-linejoin="round"></path>
+    <path d="M630 450 L830 350 L830 372 L630 472 Z" fill="#E9C98E" stroke="#3B3355" stroke-width="3" stroke-linejoin="round"></path>
+    <path d="M560 410 L700 340" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" opacity="0.7"></path>
+
+    <!-- 货的路：青色，从工厂上船，再到仓库 -->
+    <path class="wflow" d="M345 318 C380 360 380 410 405 430 C450 455 520 420 560 360 C580 335 600 318 620 312" fill="none" stroke="#2FAF7C" stroke-width="5" stroke-dasharray="4 16" stroke-linecap="round"></path>
+    <!-- 钱的路：金色，从马来西亚回到中国 -->
+    <path d="M600 262 C560 170 380 150 300 205" fill="none" stroke="#F2A900" stroke-width="5" stroke-dasharray="4 14" stroke-linecap="round"></path>
+
+    <!-- 工厂 -->
+    <g transform="translate(0 12)" stroke="#3B3355" stroke-width="3" stroke-linejoin="round">
+      <polygon points="163,205 232,245 232,295 163,255" fill="#FFFFFF"></polygon>
+      <polygon points="232,245 284,215 284,265 232,295" fill="#EDEAF4"></polygon>
+      <polygon points="189,168 258,208 284,215 215,175" fill="#FF9C8C"></polygon>
+      <polygon points="189,168 258,208 232,245 163,205" fill="#FF7B6B"></polygon>
+      <polygon points="284,215 258,208 232,245" fill="#FFFFFF"></polygon>
+      <polygon points="180,232 196,241 196,262 180,253" fill="#9FD8F2" stroke-width="2.5"></polygon>
+      <polygon points="205,246 221,255 221,276 205,267" fill="#9FD8F2" stroke-width="2.5"></polygon>
+      <polygon points="248,262 268,250 268,276 248,288" fill="#FFC93C" stroke-width="2.5"></polygon>
+      <rect x="194" y="140" width="14" height="40" rx="3" fill="#FFFFFF"></rect>
+      <rect x="194" y="140" width="14" height="8" rx="2" fill="#FF7B6B"></rect>
+    </g>
+    <circle class="wpuff" cx="201" cy="140" r="9" fill="#FFFFFF" stroke="#D9E2EC" stroke-width="2"></circle>
+    <circle class="wpuff2" cx="204" cy="132" r="7" fill="#FFFFFF" stroke="#D9E2EC" stroke-width="2"></circle>
+    <!-- 门口的货箱 -->
+    <g stroke="#3B3355" stroke-width="2.5" stroke-linejoin="round">
+      <polygon points="302,285 318,294 318,310 302,301" fill="#FFD9A0"></polygon><polygon points="318,294 334,285 334,301 318,310" fill="#F2BC6E"></polygon><polygon points="318,276 334,285 318,294 302,285" fill="#FFE7C2"></polygon>
+      <polygon points="324,296 340,305 340,321 324,312" fill="#FFD9A0"></polygon><polygon points="340,305 356,296 356,312 340,321" fill="#F2BC6E"></polygon><polygon points="340,287 356,296 340,305 324,296" fill="#FFE7C2"></polygon>
+      <polygon points="313,274 329,283 329,299 313,290" fill="#FFD9A0"></polygon><polygon points="329,283 345,274 345,290 329,299" fill="#F2BC6E"></polygon><polygon points="329,265 345,274 329,283 313,274" fill="#FFE7C2"></polygon>
+    </g>
+    <!-- 中国这边的小树 -->
+    <g stroke="#3B3355" stroke-width="2.5">
+      <rect x="117" y="268" width="6" height="16" rx="2" fill="#A9714B"></rect>
+      <circle cx="120" cy="262" r="14" fill="#9BE3B4"></circle>
+      <rect x="377" y="300" width="6" height="14" rx="2" fill="#A9714B"></rect>
+      <circle cx="380" cy="295" r="11" fill="#9BE3B4"></circle>
+    </g>
+
+    <!-- 货船 -->
+    <g class="wbob">
+      <g transform="translate(405 440)" stroke="#3B3355" stroke-width="3" stroke-linejoin="round">
+        <rect x="-34" y="-30" width="20" height="16" rx="3" fill="#7BA8FF"></rect>
+        <rect x="-12" y="-30" width="20" height="16" rx="3" fill="#FFC93C"></rect>
+        <rect x="-23" y="-46" width="20" height="16" rx="3" fill="#5ED3A0"></rect>
+        <rect x="14" y="-40" width="22" height="26" rx="4" fill="#FFFFFF"></rect>
+        <rect x="19" y="-34" width="12" height="7" rx="2" fill="#9FD8F2" stroke-width="2"></rect>
+        <path d="M-52 -14 H58 L44 12 H-42 Z" fill="#FF7B6B"></path>
+        <path d="M-47 -4 H53" stroke="#FFFFFF" stroke-width="3"></path>
+      </g>
+    </g>
+    <path d="M350 462 q12 -6 24 0 t24 0 t24 0 t24 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"></path>
+
+    <!-- 仓库 -->
+    <g stroke="#3B3355" stroke-width="3" stroke-linejoin="round">
+      <polygon points="588,252 666,297 666,343 588,298" fill="#FFFFFF"></polygon>
+      <polygon points="666,297 718,267 718,313 666,343" fill="#EDEAF4"></polygon>
+      <polygon points="640,222 718,267 666,297 588,252" fill="#7FD4C1"></polygon>
+      <polygon points="604,280 650,307 650,336 604,309" fill="#FFE08A" stroke-width="2.5"></polygon>
+      <path d="M604 290 L650 317 M604 300 L650 327" stroke-width="2"></path>
+    </g>
+    <!-- 店铺：三间彩色的排屋 -->
+    <g stroke="#3B3355" stroke-width="3" stroke-linejoin="round">
+      <polygon points="499,296 533,316 533,356 499,336" fill="#FFD1C7"></polygon>
+      <polygon points="533,316 565,298 565,338 533,356" fill="#F7B8AA"></polygon>
+      <polygon points="514,269 549,289 565,298 530,278" fill="#FF9C8C"></polygon>
+      <polygon points="514,269 549,289 533,316 499,296" fill="#FF7B6B"></polygon>
+      <polygon points="565,298 549,289 533,316" fill="#FFD1C7"></polygon>
+      <polygon points="508,316 524,325 524,346 508,337" fill="#FFFFFF" stroke-width="2.5"></polygon>
+
+      <polygon points="539,308 573,328 573,376 539,356" fill="#FFF0B3"></polygon>
+      <polygon points="573,328 605,310 605,358 573,376" fill="#F5DD8C"></polygon>
+      <polygon points="554,281 589,301 605,310 570,290" fill="#9FC2FF"></polygon>
+      <polygon points="554,281 589,301 573,328 539,308" fill="#7BA8FF"></polygon>
+      <polygon points="605,310 589,301 573,328" fill="#FFF0B3"></polygon>
+      <polygon points="546,340 566,352 566,372 546,360" fill="#FFFFFF" stroke-width="2.5"></polygon>
+      <path d="M543 330 L569 345" stroke="#FF7B6B" stroke-width="5"></path>
+
+      <polygon points="669,350 703,370 703,406 669,386" fill="#E3DBFF"></polygon>
+      <polygon points="703,370 735,352 735,388 703,406" fill="#CFC3F5"></polygon>
+      <polygon points="684,325 719,345 735,352 700,332" fill="#B5E8C8"></polygon>
+      <polygon points="684,325 719,345 703,370 669,350" fill="#5ED3A0"></polygon>
+      <polygon points="735,352 719,345 703,370" fill="#E3DBFF"></polygon>
+      <polygon points="678,368 694,377 694,398 678,389" fill="#FFFFFF" stroke-width="2.5"></polygon>
+    </g>
+    <!-- 仓库门口的货箱 -->
+    <g stroke="#3B3355" stroke-width="2.5" stroke-linejoin="round">
+      <polygon points="691,312 705,320 705,334 691,326" fill="#FFD9A0"></polygon><polygon points="705,320 719,312 719,326 705,334" fill="#F2BC6E"></polygon><polygon points="705,304 719,312 705,320 691,312" fill="#FFE7C2"></polygon>
+      <polygon points="708,321 722,329 722,343 708,335" fill="#FFD9A0"></polygon><polygon points="722,329 736,321 736,335 722,343" fill="#F2BC6E"></polygon><polygon points="722,313 736,321 722,329 708,321" fill="#FFE7C2"></polygon>
+    </g>
+    <!-- 棕榈树 -->
+    <g stroke="#3B3355" stroke-width="2.5" stroke-linejoin="round">
+      <path d="M790 352 C788 330 794 316 788 300" fill="none" stroke="#A9714B" stroke-width="6" stroke-linecap="round"></path>
+      <path d="M788 300 c-20 -6 -34 4 -40 14 c16 -10 28 -8 40 -14 z M788 300 c20 -8 34 0 42 10 c-16 -8 -30 -6 -42 -10 z M788 300 c-6 -18 -20 -24 -32 -22 c14 4 22 10 32 22 z M788 300 c8 -18 22 -22 34 -18 c-14 2 -24 8 -34 18 z" fill="#5ED3A0"></path>
+      <path d="M482 362 C481 346 485 336 481 324" fill="none" stroke="#A9714B" stroke-width="5" stroke-linecap="round"></path>
+      <path d="M481 324 c-16 -5 -27 3 -32 11 c13 -8 22 -6 32 -11 z M481 324 c16 -6 27 0 33 8 c-13 -6 -24 -5 -33 -8 z M481 324 c-5 -14 -16 -19 -26 -17 c11 3 18 8 26 17 z M481 324 c6 -14 18 -17 27 -14 c-11 2 -19 6 -27 14 z" fill="#5ED3A0"></path>
+    </g>
+
+    <!-- 买家：拿到包裹，开心地跳 -->
+    <g class="whop">
+      <g transform="translate(640 420)" stroke="#3B3355" stroke-width="2.2" stroke-linejoin="round">
+        <path d="M-9 12 Q0 5 9 12 L8 24 H-8 Z" fill="#FFB8A1"></path>
+        <path d="M-12 2 Q-12 -14 0 -15 Q12 -14 12 2 Q12 12 0 13 Q-12 12 -12 2 Z" fill="#C7B8FF"></path>
+        <circle cx="0" cy="0" r="8.5" fill="#FFE3CF"></circle>
+        <circle cx="-3" cy="-1" r="1.5" fill="#3B3355" stroke="none"></circle>
+        <circle cx="3" cy="-1" r="1.5" fill="#3B3355" stroke="none"></circle>
+        <path d="M-2.5 3 Q0 5.5 2.5 3" fill="none" stroke-width="1.6"></path>
+        <rect x="6" y="10" width="13" height="11" rx="2" fill="#FFD9A0"></rect>
+        <path d="M12.5 10 v11" stroke-width="1.6"></path>
+      </g>
+    </g>
+    <g transform="translate(762 398)" stroke="#3B3355" stroke-width="2.2" stroke-linejoin="round">
+      <path d="M-9 12 Q0 5 9 12 L8 24 H-8 Z" fill="#7BA8FF"></path>
+      <circle cx="0" cy="0" r="10" fill="#FFE3CF"></circle>
+      <path d="M-10 -2 Q-9 -12 0 -12 Q9 -12 10 -2 Q4 -7 0 -6 Q-5 -7 -10 -2 Z" fill="#3B3355"></path>
+      <circle cx="-3.5" cy="1" r="1.5" fill="#3B3355" stroke="none"></circle>
+      <circle cx="3.5" cy="1" r="1.5" fill="#3B3355" stroke="none"></circle>
+      <path d="M-2.5 5 Q0 7.5 2.5 5" fill="none" stroke-width="1.6"></path>
+      <rect x="-22" y="8" width="10" height="16" rx="2" fill="#3B3355"></rect>
+      <rect x="-20" y="10" width="6" height="10" rx="1" fill="#9FD8F2" stroke="none"></rect>
+    </g>
+
+    <!-- 金币在回中国的路上 -->
+    <g stroke="#3B3355" stroke-width="2.5">
+      <g class="wspin"><circle cx="560" cy="198" r="10" fill="#FFC93C"></circle></g>
+      <g class="wspin"><circle cx="470" cy="166" r="10" fill="#FFC93C"></circle></g>
+      <g class="wspin"><circle cx="380" cy="168" r="10" fill="#FFC93C"></circle></g>
+    </g>
+  </svg>

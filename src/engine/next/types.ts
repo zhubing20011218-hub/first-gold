@@ -126,6 +126,8 @@ export interface ScheduledEvent {
 export interface Schedule {
   /** 每个季度每种货的趋势（bp） */
   trendBp: Record<string, number>[];
+  /** 每个季度每种货对手的零售价（仙）。比对手便宜，零售单多 */
+  rivalPriceSen: Record<string, number>[];
   /** 每个季度每种货事先看不到的波动（bp） */
   surpriseBp: Record<string, number>[];
   inquiries: Inquiry[];

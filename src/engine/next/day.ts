@@ -2,7 +2,7 @@
 // 传进来的状态不会被改动：开头浅拷贝，数组和对象要改时换成新的。
 import { adShareBp } from "../ads";
 import { dayRng, roundMilli } from "../dayRng";
-import { priceFactorBp, ratingFactorBp } from "../market";
+import { ratingFactorBp } from "../market";
 import { applyBp } from "../money";
 import type { Product } from "../product";
 import { pricePoints } from "../push";
@@ -18,6 +18,7 @@ import {
   inTransitQty,
   finalNetWorthFen,
   netWorthFen,
+  priceFactorVsRival,
   productOf,
   pushBp,
   quarterOf,
@@ -137,7 +138,7 @@ function wantedToday(s: GameState, world: World): Record<string, Wanted> {
 
   products.forEach((p, idx) => {
     const price = priceToday(s, p);
-    const pf = priceFactorBp(price, p, params);
+    const pf = priceFactorVsRival(s, quarterOf(s.day), price, p, params);
     const demandBp = demandBpOf(s, p, idx, params);
     let m = applyBp(p.organicPerDayMilli, params.marketScaleBp.value);
     for (const bp of [demandBp, push, pf, rf, breachBp, routeBp]) m = applyBp(m, bp);

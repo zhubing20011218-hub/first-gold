@@ -1,7 +1,7 @@
 // "这一季大约"：按玩家现在填的数，估一个季度能卖多少、赚多少、季末现金多少。
 // 只用平均数（不看每天的波动、不看还没发生的事件），所以和真实结果会有差别。
 import { applyBp } from "../../engine/money";
-import { priceFactorBp, ratingFactorBp } from "../../engine/market";
+import { ratingFactorBp } from "../../engine/market";
 import { settleOrder } from "../../engine/settle";
 import { restockCostFen } from "../../engine/stock";
 import { adShareBp } from "../../engine/ads";
@@ -13,6 +13,7 @@ import {
   inTransitQty,
   leadDays,
   netWorthFen,
+  priceFactorVsRival,
   pushBp,
   shopLevel,
   quarterOf,
@@ -79,7 +80,7 @@ export function estimateQuarter(state: GameState, d: QuarterDecision, world: Wor
   let receiveFen = 0;
   const rows: ProductEstimate[] = products.map((p, i) => {
     const price = d.priceSen[p.id] ?? state.priceSen[p.id];
-    const pf = priceFactorBp(price, p, params);
+    const pf = priceFactorVsRival(state, q, price, p, params);
     let m = applyBp(p.organicPerDayMilli, params.marketScaleBp.value);
     for (const bp of [heatBp(state, q, p, params), push, pf, rf, routeBp, breachBp]) m = applyBp(m, bp);
     let demand = Math.floor((m * DAYS_PER_QUARTER) / 1000);
