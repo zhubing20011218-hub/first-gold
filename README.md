@@ -16,6 +16,7 @@
 | `npm run preview` | 在本地预览打包结果 |
 | `npm run check` | 自动检查 K1 到 K5 |
 | `npm run check:full` | 自动检查 K1 到 K8 |
+| `bash deploy/deploy.sh` | 部署到 https://test.prismice.cn（主站香港服务器，只传改过的文件） |
 
 ## 运行环境
 

@@ -1,0 +1,29 @@
+# 第一桶金网站容器内部用的 Caddy 配置(只在 prismice_app-network 内网监听 80 端口)
+# HTTPS 证书由主站网关 prismice-caddy-1 负责,它把 test.prismice.cn 转发到这里。
+{
+  admin off
+  auto_https off
+}
+
+:80 {
+  root * /srv
+  encode zstd gzip
+
+  # 整个游戏只有一个页面(docs/01 第七节):找不到的路径都回到首页
+  try_files {path} /index.html
+
+  # 带内容哈希的文件(js、css、字体、图)可以长期缓存;页面本身每次都检查更新,部署后玩家马上看到新版本
+  @hashed path /assets/*
+  header @hashed Cache-Control "public, max-age=31536000, immutable"
+  @html path / /index.html
+  header @html Cache-Control "no-cache"
+  header /version.txt Cache-Control "no-cache"
+
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+    -Server
+  }
+
+  file_server
+}
