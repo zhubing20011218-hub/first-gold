@@ -1,9 +1,25 @@
 # 第一桶金
 
-一个网页小游戏，一局几分钟。玩家是老板，手下有三个 AI 员工（采购、运营、财务），把中国的货卖到马来西亚，经营两年，共 8 个季度。
+一个网页小游戏，一局几分钟。玩家是老板，从五万块起步，把中国的货卖到马来西亚，经营两年（8 个季度），每半年选一条路线，看能不能赚到一百万。
+
+- 在线试玩：https://test.prismice.cn
+- 旧版（按季度、三个功能区）在标签 `旧版-季度制`，网页里加 `?old=1` 也能打开。
 
 > 这一份由 Claude Code 按规则包第 1 版开发，用来试验规则包能不能把游戏做到理想的效果。
 > 规则见 `AGENTS.md` 和 `docs/`。
+
+## 下载源码并在自己电脑上运行
+
+需要先装好 [Git](https://git-scm.com/) 和 [Node.js](https://nodejs.org/) 20 或更高版本，然后在终端里依次运行：
+
+```bash
+git clone https://github.com/zhubing20011218-hub/first-gold.git
+cd first-gold
+npm install
+npm run dev
+```
+
+终端里会出现一个 `http://localhost:` 开头的网址，用浏览器打开就能玩。以后要拿到最新的代码，在 `first-gold` 文件夹里运行 `git pull`。
 
 ## 命令
 
